@@ -28,3 +28,7 @@ Thumbs.db
 # Coverage / Testing outputs
 coverage/
 .nyc_output/
+
+# Ignore AGENTS.md in all directories
+**/AGENTS.md
+**/agents.md
