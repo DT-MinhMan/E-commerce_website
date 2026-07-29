@@ -1,34 +1,14 @@
-# Dependencies
 node_modules/
-.pnpm-store/
-
-# Build outputs
 dist/
 build/
-*.tsbuildinfo
-
-# Environment & Secrets
+coverage/
 .env
-.env.local
-.env.*.local
-
-# Logs
+.env.*
+!.env.example
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-logs/
-*.log
-
-# IDE & OS files
-.vscode/
-.idea/
 .DS_Store
-Thumbs.db
-
-# Coverage / Testing outputs
-coverage/
-.nyc_output/
-
-# Ignore AGENTS.md in all directories
-**/AGENTS.md
-**/agents.md
+.vite/
+*.md
+docs/

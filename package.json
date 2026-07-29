@@ -1,0 +1,23 @@
+{
+  "name": "mern-ecommerce",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MERN e-commerce project foundation.",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "dev:backend": "pnpm --filter @mern-ecommerce/backend dev",
+    "dev:frontend": "pnpm --filter @mern-ecommerce/frontend dev",
+    "lint": "pnpm --filter @mern-ecommerce/backend lint && pnpm --filter @mern-ecommerce/frontend lint",
+    "type-check": "pnpm --filter @mern-ecommerce/backend type-check && pnpm --filter @mern-ecommerce/frontend type-check",
+    "test": "pnpm --filter @mern-ecommerce/backend test",
+    "test:integration": "pnpm --filter @mern-ecommerce/backend test:integration",
+    "build": "pnpm --filter @mern-ecommerce/backend build && pnpm --filter @mern-ecommerce/frontend build",
+    "db:indexes": "pnpm --filter @mern-ecommerce/backend db:indexes",
+    "db:seed": "pnpm --filter @mern-ecommerce/backend db:seed",
+    "db:seed:reset": "pnpm --filter @mern-ecommerce/backend db:seed:reset"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
