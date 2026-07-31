@@ -1,25 +1,18 @@
-import { useEffect } from "react";
 import { Loading } from "../components/Loading.js";
-import { useAppDispatch, useAppSelector } from "../hooks/storeHooks.js";
-import { fetchHealth } from "../store/healthSlice.js";
+import { useHealthQuery } from "../hooks/useHealthQuery.js";
 
 export const HealthPage = () => {
-  const dispatch = useAppDispatch();
-  const { data, error, status } = useAppSelector((state) => state.health);
+  const { data, error, isError, isLoading } = useHealthQuery();
 
-  useEffect(() => {
-    void dispatch(fetchHealth());
-  }, [dispatch]);
-
-  if (status === "loading") {
+  if (isLoading) {
     return <Loading />;
   }
 
-  if (status === "failed") {
+  if (isError) {
     return (
       <section className="panel">
         <h2>API Health</h2>
-        <p className="status-error">{error}</p>
+        <p className="status-error">{error.message}</p>
       </section>
     );
   }

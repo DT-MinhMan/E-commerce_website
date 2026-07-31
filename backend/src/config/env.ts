@@ -11,17 +11,41 @@ export interface AppConfig {
   mongodbUri: string;
   clientUrl: string;
   logLevel: LogLevel;
+  jwtAccessSecret: string;
+  jwtAccessExpiresIn: string;
+  refreshTokenExpiresInDays: number;
+  cookieSecure: boolean;
+  cookieSameSite: "strict" | "lax" | "none";
 }
 
 let cachedConfig: AppConfig | null = null;
 
-const requiredKeys = ["NODE_ENV", "PORT", "MONGODB_URI", "CLIENT_URL", "LOG_LEVEL"] as const;
+const requiredKeys = ["NODE_ENV", "PORT", "MONGODB_URI", "CLIENT_URL", "LOG_LEVEL", "JWT_ACCESS_SECRET"] as const;
 
 const isNodeEnv = (value: string): value is NodeEnv =>
   value === "development" || value === "test" || value === "production";
 
 const isLogLevel = (value: string): value is LogLevel =>
   value === "silent" || value === "debug" || value === "info" || value === "warn" || value === "error";
+
+const isCookieSameSite = (value: string): value is AppConfig["cookieSameSite"] =>
+  value === "strict" || value === "lax" || value === "none";
+
+const parseBoolean = (value: string | undefined, fallback: boolean): boolean => {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  throw new Error("COOKIE_SECURE must be true or false");
+};
 
 export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => {
   const missingKeys = requiredKeys.filter((key) => !env[key]);
@@ -33,6 +57,8 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
   const nodeEnv = env.NODE_ENV as string;
   const logLevel = env.LOG_LEVEL as string;
   const port = Number(env.PORT);
+  const refreshTokenExpiresInDays = Number(env.REFRESH_TOKEN_EXPIRES_IN_DAYS ?? "7");
+  const cookieSameSite = env.COOKIE_SAME_SITE ?? "lax";
 
   if (!isNodeEnv(nodeEnv)) {
     throw new Error("NODE_ENV must be one of development, test, production");
@@ -46,12 +72,27 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
     throw new Error("LOG_LEVEL must be one of silent, debug, info, warn, error");
   }
 
+  if (!Number.isInteger(refreshTokenExpiresInDays) || refreshTokenExpiresInDays <= 0) {
+    throw new Error("REFRESH_TOKEN_EXPIRES_IN_DAYS must be a positive integer");
+  }
+
+  if (!isCookieSameSite(cookieSameSite)) {
+    throw new Error("COOKIE_SAME_SITE must be one of strict, lax, none");
+  }
+
+  const cookieSecure = parseBoolean(env.COOKIE_SECURE, nodeEnv === "production");
+
   return {
     nodeEnv,
     port,
     mongodbUri: env.MONGODB_URI as string,
     clientUrl: env.CLIENT_URL as string,
-    logLevel
+    logLevel,
+    jwtAccessSecret: env.JWT_ACCESS_SECRET as string,
+    jwtAccessExpiresIn: env.JWT_ACCESS_EXPIRES_IN ?? "15m",
+    refreshTokenExpiresInDays,
+    cookieSecure,
+    cookieSameSite
   };
 };
 
