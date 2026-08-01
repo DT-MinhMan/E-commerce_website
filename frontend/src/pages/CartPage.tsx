@@ -128,9 +128,15 @@ export const CartPage = () => {
       <aside className="cart-summary">
         <p>{cart.itemCount} items</p>
         <h3>Subtotal {formatPrice(cart.subtotalMinor, cart.currency)}</h3>
-        <button type="button" className="primary-action" disabled>
-          Checkout in Phase 7
-        </button>
+        {hasUnavailableItems ? (
+          <button type="button" className="primary-action" disabled>
+            Review unavailable items
+          </button>
+        ) : (
+          <Link className="primary-link" to="/checkout">
+            Checkout
+          </Link>
+        )}
       </aside>
     </section>
   );

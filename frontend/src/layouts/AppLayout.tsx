@@ -23,6 +23,7 @@ export const AppLayout = () => {
           {user ? (
             <>
               <NavLink to="/cart">Cart{cartCount > 0 ? ` (${cartCount})` : ""}</NavLink>
+              <NavLink to="/orders">Orders</NavLink>
               <NavLink to="/account">Account</NavLink>
               {user.role === "ADMIN" && <NavLink to="/admin">Admin</NavLink>}
               <button type="button" onClick={() => logout.mutate()} disabled={status === "loading"}>

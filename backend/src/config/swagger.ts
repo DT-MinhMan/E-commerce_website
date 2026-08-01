@@ -163,6 +163,124 @@ export const swaggerSpec = (config: AppConfig) => ({
         }
       }
     },
+    "/api/v1/orders/checkout": {
+      post: {
+        summary: "Create a pending order and payment from the current cart",
+        tags: ["Orders"],
+        security: bearerSecurity,
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/CheckoutRequest" } } } },
+        responses: {
+          "201": { description: "Created pending order", content: { "application/json": { schema: { $ref: "#/components/schemas/OrderSuccessResponse" } } } },
+          "400": { description: "Empty cart, inactive product or invalid address", ...errorResponse },
+          "401": { description: "Missing or invalid access token", ...errorResponse },
+          "403": { description: "Customer role required", ...errorResponse },
+          "404": { description: "Missing product", ...errorResponse },
+          "409": { description: "Insufficient stock, currency mismatch or order number conflict", ...errorResponse },
+          "500": { description: "Checkout transaction failed", ...errorResponse }
+        }
+      }
+    },
+    "/api/v1/orders": {
+      get: {
+        summary: "List current customer orders",
+        tags: ["Orders"],
+        security: bearerSecurity,
+        parameters: [
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 50, default: 10 } }
+        ],
+        responses: {
+          "200": {
+            description: "Customer orders with pagination metadata",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/OrderListSuccessResponse" } } }
+          },
+          "400": { description: "Invalid pagination", ...errorResponse },
+          "401": { description: "Missing or invalid access token", ...errorResponse },
+          "403": { description: "Customer role required", ...errorResponse }
+        }
+      }
+    },
+    "/api/v1/orders/{orderId}": {
+      get: {
+        summary: "Get a current customer order by id",
+        tags: ["Orders"],
+        security: bearerSecurity,
+        parameters: [{ name: "orderId", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "Customer order", content: { "application/json": { schema: { $ref: "#/components/schemas/OrderSuccessResponse" } } } },
+          "401": { description: "Missing or invalid access token", ...errorResponse },
+          "403": { description: "Customer role required", ...errorResponse },
+          "404": { description: "Order not found", ...errorResponse }
+        }
+      }
+    },
+    "/api/v1/payments/checkout-session": {
+      post: {
+        summary: "Create a Stripe hosted Checkout Session for a payable order",
+        tags: ["Payments"],
+        security: bearerSecurity,
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CreateCheckoutSessionRequest" } } }
+        },
+        responses: {
+          "200": {
+            description: "Stripe Checkout Session redirect data",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/CheckoutSessionSuccessResponse" } } }
+          },
+          "400": { description: "Invalid request", ...errorResponse },
+          "401": { description: "Missing or invalid access token", ...errorResponse },
+          "403": { description: "Customer role required", ...errorResponse },
+          "404": { description: "Order or payment not found", ...errorResponse },
+          "409": { description: "Order is not payable or amount mismatch", ...errorResponse },
+          "500": { description: "Stripe configuration missing", ...errorResponse },
+          "502": { description: "Stripe response missing checkout URL", ...errorResponse }
+        }
+      }
+    },
+    "/api/v1/payments/orders/{orderId}": {
+      get: {
+        summary: "Get payment status for a current customer's order",
+        tags: ["Payments"],
+        security: bearerSecurity,
+        parameters: [{ name: "orderId", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": {
+            description: "Payment and order payment status",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/PaymentStatusSuccessResponse" } } }
+          },
+          "401": { description: "Missing or invalid access token", ...errorResponse },
+          "403": { description: "Customer role required", ...errorResponse },
+          "404": { description: "Order or payment not found", ...errorResponse }
+        }
+      }
+    },
+    "/api/v1/webhooks/stripe": {
+      post: {
+        summary: "Receive signed Stripe webhook events",
+        tags: ["Webhooks"],
+        parameters: [
+          {
+            name: "Stripe-Signature",
+            in: "header",
+            required: true,
+            schema: { type: "string" },
+            description: "Stripe signature used to verify the raw request body."
+          }
+        ],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object" } } }
+        },
+        responses: {
+          "200": {
+            description: "Webhook accepted",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/WebhookReceivedSuccessResponse" } } }
+          },
+          "400": { description: "Missing or invalid Stripe signature", ...errorResponse }
+        }
+      }
+    },
     "/api/v1/categories": {
       get: {
         summary: "List active public categories",
@@ -528,6 +646,102 @@ export const swaggerSpec = (config: AppConfig) => ({
           currency: { type: "string", example: "USD" }
         }
       },
+      ShippingAddress: {
+        type: "object",
+        required: ["recipientName", "phone", "addressLine1", "city", "stateOrProvince", "postalCode", "countryCode"],
+        properties: {
+          recipientName: { type: "string", example: "Demo Customer" },
+          phone: { type: "string", example: "1234567890" },
+          addressLine1: { type: "string", example: "123 Test Street" },
+          addressLine2: { type: "string", example: "Unit 4" },
+          city: { type: "string", example: "Test City" },
+          stateOrProvince: { type: "string", example: "CA" },
+          postalCode: { type: "string", example: "94105" },
+          countryCode: { type: "string", minLength: 2, maxLength: 2, example: "US" }
+        }
+      },
+      CheckoutRequest: {
+        type: "object",
+        required: ["shippingAddress"],
+        properties: {
+          shippingAddress: { $ref: "#/components/schemas/ShippingAddress" }
+        }
+      },
+      CreateCheckoutSessionRequest: {
+        type: "object",
+        required: ["orderId"],
+        properties: {
+          orderId: { type: "string", example: "66a8f0d24b23d5f35a6a4444" }
+        }
+      },
+      OrderItem: {
+        type: "object",
+        properties: {
+          productId: { type: "string", example: "66a8f0d24b23d5f35a6a2222" },
+          productName: { type: "string", example: "Mechanical Gaming Keyboard" },
+          productSlug: { type: "string", example: "mechanical-gaming-keyboard" },
+          productImage: { nullable: true, allOf: [{ $ref: "#/components/schemas/ProductImage" }] },
+          unitPriceMinor: { type: "integer", example: 8999 },
+          quantity: { type: "integer", example: 2 },
+          lineTotalMinor: { type: "integer", example: 17998 }
+        }
+      },
+      Order: {
+        type: "object",
+        properties: {
+          id: { type: "string", example: "66a8f0d24b23d5f35a6a4444" },
+          orderNumber: { type: "string", example: "ORD-20260731-123456" },
+          items: { type: "array", items: { $ref: "#/components/schemas/OrderItem" } },
+          shippingAddress: { $ref: "#/components/schemas/ShippingAddress" },
+          subtotalMinor: { type: "integer", example: 17998 },
+          shippingFeeMinor: { type: "integer", example: 0 },
+          totalMinor: { type: "integer", example: 17998 },
+          currency: { type: "string", example: "USD" },
+          orderStatus: { type: "string", enum: ["PENDING_PAYMENT", "PAID", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "REFUNDED", "PAYMENT_REVIEW"] },
+          paymentStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REFUNDED"] },
+          paidAt: { type: "string", format: "date-time", nullable: true },
+          cancelledAt: { type: "string", format: "date-time", nullable: true },
+          completedAt: { type: "string", format: "date-time", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" }
+        }
+      },
+      CheckoutSession: {
+        type: "object",
+        properties: {
+          checkoutUrl: { type: "string", format: "uri", example: "https://checkout.stripe.com/c/pay/cs_test_123" },
+          sessionId: { type: "string", example: "cs_test_123" }
+        }
+      },
+      PaymentStatus: {
+        type: "object",
+        properties: {
+          payment: {
+            type: "object",
+            properties: {
+              orderId: { type: "string" },
+              status: { type: "string", enum: ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REFUNDED"] },
+              amountMinor: { type: "integer", example: 17998 },
+              currency: { type: "string", example: "USD" },
+              provider: { type: "string", enum: ["STRIPE"] },
+              providerCheckoutSessionId: { type: "string", nullable: true, example: "cs_test_123" },
+              providerPaymentId: { type: "string", nullable: true, example: "pi_test_123" },
+              paidAt: { type: "string", format: "date-time", nullable: true },
+              failureCode: { type: "string", nullable: true },
+              failureMessage: { type: "string", nullable: true }
+            }
+          },
+          order: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              orderStatus: { type: "string", enum: ["PENDING_PAYMENT", "PAID", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "REFUNDED", "PAYMENT_REVIEW"] },
+              paymentStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REFUNDED"] },
+              paidAt: { type: "string", format: "date-time", nullable: true }
+            }
+          }
+        }
+      },
       CategorySuccessResponse: {
         allOf: [
           { $ref: "#/components/schemas/StandardSuccessResponse" },
@@ -567,6 +781,42 @@ export const swaggerSpec = (config: AppConfig) => ({
         allOf: [
           { $ref: "#/components/schemas/StandardSuccessResponse" },
           { type: "object", properties: { data: { type: "object", properties: { cart: { $ref: "#/components/schemas/Cart" } } } } }
+        ]
+      },
+      OrderSuccessResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/StandardSuccessResponse" },
+          { type: "object", properties: { data: { type: "object", properties: { order: { $ref: "#/components/schemas/Order" } } } } }
+        ]
+      },
+      OrderListSuccessResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/StandardSuccessResponse" },
+          {
+            type: "object",
+            properties: {
+              data: { type: "object", properties: { orders: { type: "array", items: { $ref: "#/components/schemas/Order" } } } },
+              meta: { $ref: "#/components/schemas/PaginationMeta" }
+            }
+          }
+        ]
+      },
+      CheckoutSessionSuccessResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/StandardSuccessResponse" },
+          { type: "object", properties: { data: { $ref: "#/components/schemas/CheckoutSession" } } }
+        ]
+      },
+      PaymentStatusSuccessResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/StandardSuccessResponse" },
+          { type: "object", properties: { data: { $ref: "#/components/schemas/PaymentStatus" } } }
+        ]
+      },
+      WebhookReceivedSuccessResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/StandardSuccessResponse" },
+          { type: "object", properties: { data: { type: "object", properties: { received: { type: "boolean", example: true } } } } }
         ]
       },
       AuthSuccessResponse: {

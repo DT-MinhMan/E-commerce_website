@@ -8,6 +8,12 @@ import { HealthPage } from "../pages/HealthPage.js";
 import { HomePage } from "../pages/HomePage.js";
 import { LoginPage } from "../pages/LoginPage.js";
 import { NotFoundPage } from "../pages/NotFoundPage.js";
+import { CheckoutPage } from "../pages/CheckoutPage.js";
+import { OrderDetailPage } from "../pages/OrderDetailPage.js";
+import { OrderHistoryPage } from "../pages/OrderHistoryPage.js";
+import { PayOrderPage } from "../pages/PayOrderPage.js";
+import { PaymentCancelPage } from "../pages/PaymentCancelPage.js";
+import { PaymentSuccessPage } from "../pages/PaymentSuccessPage.js";
 import { ProductDetailPage } from "../pages/ProductDetailPage.js";
 import { ProductListPage } from "../pages/ProductListPage.js";
 import { RegisterPage } from "../pages/RegisterPage.js";
@@ -54,6 +60,30 @@ export const router = createBrowserRouter([
           {
             path: "cart",
             element: <CartPage />
+          },
+          {
+            path: "checkout",
+            element: <CheckoutPage />
+          },
+          {
+            path: "orders",
+            element: <OrderHistoryPage />
+          },
+          {
+            path: "orders/:orderId",
+            element: <OrderDetailPage />
+          },
+          {
+            path: "orders/:orderId/pay",
+            element: <PayOrderPage />
+          },
+          {
+            path: "payment/success",
+            element: <PaymentSuccessPage />
+          },
+          {
+            path: "payment/cancel",
+            element: <PaymentCancelPage />
           }
         ]
       },

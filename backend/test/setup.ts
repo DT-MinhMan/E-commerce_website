@@ -1,6 +1,6 @@
 process.env.NODE_ENV = "test";
 process.env.PORT = "5000";
-process.env.MONGODB_URI = "mongodb://localhost:27017/mern_ecommerce_test";
+process.env.MONGODB_URI = "mongodb://localhost:27017/mern_ecommerce_test?replicaSet=rs0";
 process.env.CLIENT_URL = "http://localhost:5173";
 process.env.LOG_LEVEL = "silent";
 process.env.JWT_ACCESS_SECRET = "test-access-secret-with-enough-length-for-phase-3";
@@ -8,3 +8,7 @@ process.env.JWT_ACCESS_EXPIRES_IN = "15m";
 process.env.REFRESH_TOKEN_EXPIRES_IN_DAYS = "7";
 process.env.COOKIE_SECURE = "false";
 process.env.COOKIE_SAME_SITE = "lax";
+process.env.STRIPE_SECRET_KEY = "sk_test_mock";
+process.env.STRIPE_WEBHOOK_SECRET = "whsec_mock";
+process.env.STRIPE_SUCCESS_URL = "http://localhost:5173/payment/success?orderId={ORDER_ID}";
+process.env.STRIPE_CANCEL_URL = "http://localhost:5173/payment/cancel?orderId={ORDER_ID}";

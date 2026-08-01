@@ -8,6 +8,8 @@ import {
   registerCustomer
 } from "../services/authService.js";
 import { cartKeys } from "./useCartQueries.js";
+import { orderKeys } from "./useOrderQueries.js";
+import { paymentKeys } from "./usePaymentQueries.js";
 import type { ApiError } from "../services/apiClient.js";
 import { useAuthStore } from "../store/authStore.js";
 import type { AuthUser, LoginRequest, RegisterRequest } from "../types/auth.js";
@@ -101,11 +103,15 @@ export const useLogout = () => {
       clearSession();
       queryClient.removeQueries({ queryKey: currentUserQueryKey });
       queryClient.removeQueries({ queryKey: cartKeys.current() });
+      queryClient.removeQueries({ queryKey: orderKeys.all });
+      queryClient.removeQueries({ queryKey: paymentKeys.all });
     },
     onError: (error) => {
       clearSession(getErrorMessage(error, "Unable to log out"));
       queryClient.removeQueries({ queryKey: currentUserQueryKey });
       queryClient.removeQueries({ queryKey: cartKeys.current() });
+      queryClient.removeQueries({ queryKey: orderKeys.all });
+      queryClient.removeQueries({ queryKey: paymentKeys.all });
     }
   });
 };

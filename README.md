@@ -16,7 +16,7 @@ frontend/    React SPA
 docs/        Project notes
 ```
 
-The foundation includes health checks, database models, seed data, authentication, role authorization, public catalog APIs, admin category/product management APIs, a customer storefront catalog UI, and authenticated customer cart behavior. Order, payment, checkout, and full admin frontend workflows are intentionally not implemented yet.
+The foundation includes health checks, database models, seed data, authentication, role authorization, public catalog APIs, admin category/product management APIs, a customer storefront catalog UI, authenticated customer cart behavior, checkout, orders and Stripe test-mode payments. Full admin frontend workflows are intentionally not implemented yet.
 
 ## Prerequisites
 
@@ -38,7 +38,7 @@ Backend variables:
 ```env
 NODE_ENV=development
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/mern_ecommerce
+MONGODB_URI=mongodb://localhost:27017/mern_ecommerce?replicaSet=rs0
 CLIENT_URL=http://localhost:5173
 LOG_LEVEL=info
 JWT_ACCESS_SECRET=replace-with-a-long-random-secret
@@ -46,6 +46,10 @@ JWT_ACCESS_EXPIRES_IN=15m
 REFRESH_TOKEN_EXPIRES_IN_DAYS=7
 COOKIE_SECURE=false
 COOKIE_SAME_SITE=lax
+STRIPE_SECRET_KEY=sk_test_replace_me
+STRIPE_WEBHOOK_SECRET=whsec_replace_me
+STRIPE_SUCCESS_URL=http://localhost:5173/payment/success?orderId={ORDER_ID}
+STRIPE_CANCEL_URL=http://localhost:5173/payment/cancel?orderId={ORDER_ID}
 SEED_ADMIN_EMAIL=admin@example.com
 SEED_ADMIN_PASSWORD=ChangeMe123!
 SEED_CUSTOMER_EMAIL=customer@example.com
@@ -62,6 +66,13 @@ VITE_API_BASE_URL=http://localhost:5000/api/v1
 
 ```bash
 docker compose up -d mongodb
+```
+
+Checkout uses MongoDB transactions, so local MongoDB runs as a single-node replica set named `rs0`. If an existing standalone development volume was created before Phase 7, restart MongoDB and confirm the replica set is initialized:
+
+```bash
+docker compose up -d mongodb
+docker compose exec mongodb mongosh --quiet --eval "rs.status().ok"
 ```
 
 ## How To Run Backend
@@ -278,6 +289,45 @@ The React app exposes `/cart`, a navigation cart badge, product-list add buttons
 
 Detailed flow notes are documented in [docs/cart-flow.md](docs/cart-flow.md).
 
+## Checkout And Orders
+
+Phase 7 adds authenticated checkout and customer order reads.
+
+```http
+POST /api/v1/orders/checkout
+GET  /api/v1/orders
+GET  /api/v1/orders/:orderId
+```
+
+Checkout reloads current products from MongoDB, calculates totals on the server, atomically decrements product stock, creates an immutable order snapshot, creates a pending Stripe payment record and clears the cart in one MongoDB transaction. It does not create a Stripe checkout session, confirm payment or release stock for unpaid order timeout/cancel yet.
+
+Detailed flow notes are documented in [docs/checkout-flow.md](docs/checkout-flow.md).
+
+## Stripe Payments
+
+Phase 8 adds Stripe hosted Checkout in test mode.
+
+```http
+POST /api/v1/payments/checkout-session
+GET  /api/v1/payments/orders/:orderId
+POST /api/v1/webhooks/stripe
+```
+
+Create-session routes require a customer access token and only accept an `orderId`. Amount, currency and line items always come from the immutable order snapshot. The success URL is not payment confirmation; the signed Stripe webhook updates `payments`, `orders` and `payment_webhook_events`.
+
+Local Stripe CLI workflow:
+
+```bash
+docker compose up -d mongodb
+pnpm dev:backend
+pnpm dev:frontend
+stripe listen --forward-to localhost:5000/api/v1/webhooks/stripe
+```
+
+Copy the printed `whsec_...` value into `backend/.env` as `STRIPE_WEBHOOK_SECRET`, then use a Stripe test card in hosted Checkout. The success page should show confirmation pending until the webhook updates the backend.
+
+Detailed flow notes are documented in [docs/payment-flow.md](docs/payment-flow.md).
+
 ## Database Foundation
 
 Phase 2 defines these MongoDB collections:
@@ -334,8 +384,8 @@ The reset script refuses to run when `NODE_ENV=production`.
 
 ## Current Project Status
 
-Phase 6 includes authentication, authorization, public catalog reads, admin category/product management APIs, customer storefront catalog browsing, and authenticated customer cart behavior. The storefront uses TanStack Query for catalog/cart server state and URL search params for catalog filters. Order, payment, checkout, image upload, variants, reviews and wishlist APIs are intentionally not implemented yet.
+Phase 8 includes authentication, authorization, public catalog reads, admin category/product management APIs, customer storefront catalog browsing, authenticated customer cart behavior, checkout, pending order/payment creation, customer order history/detail and Stripe hosted Checkout with idempotent webhook confirmation. The storefront uses TanStack Query for catalog/cart/order/payment server state and URL search params for catalog and order pagination. Image upload, variants, reviews, wishlist APIs and unpaid-order stock release are intentionally not implemented yet.
 
 ## Next Phase
 
-Phase 7 should introduce checkout and order creation without trusting client-side prices or totals.
+Phase 9 should address Inventory Consistency, including unpaid/cancelled order stock release policy.

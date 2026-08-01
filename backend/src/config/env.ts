@@ -16,6 +16,10 @@ export interface AppConfig {
   refreshTokenExpiresInDays: number;
   cookieSecure: boolean;
   cookieSameSite: "strict" | "lax" | "none";
+  stripeSecretKey?: string;
+  stripeWebhookSecret?: string;
+  stripeSuccessUrl?: string;
+  stripeCancelUrl?: string;
 }
 
 let cachedConfig: AppConfig | null = null;
@@ -81,6 +85,21 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
   }
 
   const cookieSecure = parseBoolean(env.COOKIE_SECURE, nodeEnv === "production");
+  const stripeMissingKeys = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_SUCCESS_URL", "STRIPE_CANCEL_URL"].filter(
+    (key) => !env[key]
+  );
+
+  if (nodeEnv !== "test" && stripeMissingKeys.length > 0) {
+    throw new Error(`Missing required Stripe environment variables: ${stripeMissingKeys.join(", ")}`);
+  }
+
+  if (env.STRIPE_SUCCESS_URL && !env.STRIPE_SUCCESS_URL.includes("{ORDER_ID}")) {
+    throw new Error("STRIPE_SUCCESS_URL must include {ORDER_ID}");
+  }
+
+  if (env.STRIPE_CANCEL_URL && !env.STRIPE_CANCEL_URL.includes("{ORDER_ID}")) {
+    throw new Error("STRIPE_CANCEL_URL must include {ORDER_ID}");
+  }
 
   return {
     nodeEnv,
@@ -92,7 +111,11 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
     jwtAccessExpiresIn: env.JWT_ACCESS_EXPIRES_IN ?? "15m",
     refreshTokenExpiresInDays,
     cookieSecure,
-    cookieSameSite
+    cookieSameSite,
+    stripeSecretKey: env.STRIPE_SECRET_KEY,
+    stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
+    stripeSuccessUrl: env.STRIPE_SUCCESS_URL,
+    stripeCancelUrl: env.STRIPE_CANCEL_URL
   };
 };
 
