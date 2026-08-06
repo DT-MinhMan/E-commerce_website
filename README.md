@@ -21,7 +21,7 @@ The foundation includes health checks, database models, seed data, authenticatio
 ## Prerequisites
 
 - Node.js 20+
-- npm 10+
+- pnpm 9.15.4+
 - Docker Desktop
 
 ## Environment Setup
@@ -50,6 +50,10 @@ STRIPE_SECRET_KEY=sk_test_replace_me
 STRIPE_WEBHOOK_SECRET=whsec_replace_me
 STRIPE_SUCCESS_URL=http://localhost:5173/payment/success?orderId={ORDER_ID}
 STRIPE_CANCEL_URL=http://localhost:5173/payment/cancel?orderId={ORDER_ID}
+CLOUDINARY_CLOUD_NAME=replace_me
+CLOUDINARY_API_KEY=replace_me
+CLOUDINARY_API_SECRET=replace_me
+CLOUDINARY_PRODUCT_FOLDER=ecommerce/products
 SEED_ADMIN_EMAIL=admin@example.com
 SEED_ADMIN_PASSWORD=ChangeMe123!
 SEED_CUSTOMER_EMAIL=customer@example.com
@@ -68,7 +72,7 @@ VITE_API_BASE_URL=http://localhost:5000/api/v1
 docker compose up -d mongodb
 ```
 
-Checkout uses MongoDB transactions, so local MongoDB runs as a single-node replica set named `rs0`. If an existing standalone development volume was created before Phase 7, restart MongoDB and confirm the replica set is initialized:
+Checkout and payment finalization use MongoDB transactions, so local MongoDB runs as a single-node replica set named `rs0`. If an existing standalone development volume was created before Phase 7, restart MongoDB and confirm the replica set is initialized:
 
 ```bash
 docker compose up -d mongodb
@@ -100,7 +104,7 @@ The frontend runs at `http://localhost:5173`.
 - `pnpm dev:frontend`: run React app
 - `pnpm lint`: lint backend and frontend
 - `pnpm type-check`: type-check backend and frontend
-- `pnpm test`: run backend tests
+- `pnpm test`: run backend and frontend tests
 - `pnpm test:integration`: run backend database integration tests
 - `pnpm build`: build backend and frontend
 - `pnpm db:indexes`: synchronize MongoDB indexes
@@ -115,20 +119,39 @@ Swagger UI is available at:
 http://localhost:5000/api-docs
 ```
 
-## Health Endpoint
+## Health And Readiness Endpoints
 
 ```http
 GET /api/v1/health
+GET /api/v1/ready
 ```
 
-Successful response:
+`/health` is a lightweight liveness check. Successful response:
 
 ```json
 {
   "success": true,
   "data": {
     "status": "ok",
+    "environment": "development",
+    "timestamp": "2026-07-29T00:00:00.000Z"
+  },
+  "meta": null
+}
+```
+
+`/ready` checks MongoDB readiness and required runtime configuration without exposing secrets or calling Stripe:
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ready",
     "database": "connected",
+    "dependencies": {
+      "mongodb": "ready",
+      "stripeConfig": "configured"
+    },
     "environment": "development",
     "timestamp": "2026-07-29T00:00:00.000Z"
   },
@@ -193,8 +216,12 @@ DELETE /api/v1/admin/categories/:id
 
 GET    /api/v1/admin/products
 POST   /api/v1/admin/products
+GET    /api/v1/admin/products/:id
 PATCH  /api/v1/admin/products/:id
+PATCH  /api/v1/admin/products/:id/stock
+PATCH  /api/v1/admin/products/:id/status
 DELETE /api/v1/admin/products/:id
+POST   /api/v1/admin/uploads/product-image
 ```
 
 Admin routes require:
@@ -222,6 +249,7 @@ Catalog rules:
 - `DELETE` category/product routes are semantic deactivations; documents are not physically deleted.
 - Product/category slugs are unique and normalized lowercase.
 - Product search escapes user input and uses MVP regex search on product name; no text index is added yet.
+- Product images can be uploaded by admins to Cloudinary, then saved on products as `images[]` URLs with optional alt text.
 
 Stable catalog error codes include:
 
@@ -233,6 +261,26 @@ Stable catalog error codes include:
 - `VALIDATION_ERROR`
 
 Catalog API notes are documented in [docs/catalog-api.md](docs/catalog-api.md).
+
+## Admin Product, Inventory And Order Management
+
+Phase 10 adds operational admin workflows for products, inventory, orders and a basic dashboard.
+
+```http
+GET   /api/v1/admin/orders
+GET   /api/v1/admin/orders/:orderId
+PATCH /api/v1/admin/orders/:orderId/status
+
+GET   /api/v1/admin/dashboard/summary
+```
+
+Admin product listing supports search, status, category, stock state, sort and pagination. Product stock updates use an absolute `stockQuantity` value and product/order hard delete remains out of scope.
+
+Admin order status changes are enforced by the backend state machine. Updates include `expectedCurrentStatus`, and stale admin actions return `ORDER_STATUS_CONFLICT`.
+
+The React admin UI includes `/admin`, `/admin/products`, `/admin/products/new`, `/admin/products/:productId/edit`, `/admin/orders` and `/admin/orders/:orderId`. Admin server state is owned by TanStack Query; listing filters live in URL search params.
+
+Detailed admin notes are documented in [docs/admin-management.md](docs/admin-management.md).
 
 ## Frontend Storefront
 
@@ -299,7 +347,7 @@ GET  /api/v1/orders
 GET  /api/v1/orders/:orderId
 ```
 
-Checkout reloads current products from MongoDB, calculates totals on the server, atomically decrements product stock, creates an immutable order snapshot, creates a pending Stripe payment record and clears the cart in one MongoDB transaction. It does not create a Stripe checkout session, confirm payment or release stock for unpaid order timeout/cancel yet.
+Checkout reloads current products from MongoDB, calculates totals on the server, creates an immutable order snapshot, creates a pending Stripe payment record and clears the cart in one MongoDB transaction. It validates current stock for user feedback, but it does not reserve or decrement stock while the order is `PENDING_PAYMENT`.
 
 Detailed flow notes are documented in [docs/checkout-flow.md](docs/checkout-flow.md).
 
@@ -313,7 +361,9 @@ GET  /api/v1/payments/orders/:orderId
 POST /api/v1/webhooks/stripe
 ```
 
-Create-session routes require a customer access token and only accept an `orderId`. Amount, currency and line items always come from the immutable order snapshot. The success URL is not payment confirmation; the signed Stripe webhook updates `payments`, `orders` and `payment_webhook_events`.
+Create-session routes require a customer access token and only accept an `orderId`. Amount, currency and line items always come from the immutable order snapshot. The success URL is not payment confirmation; the signed Stripe webhook updates `payments`, `orders`, `products` and `payment_webhook_events`.
+
+Phase 9 moves inventory consumption to the verified Stripe success webhook. Product stock is decremented with conditional atomic updates inside the payment finalization transaction, so duplicate webhooks do not consume stock twice and concurrent purchases cannot make `stockQuantity` negative. If Stripe reports a successful payment but local stock can no longer fulfill the order, the payment remains `SUCCEEDED` and the order moves to `PAYMENT_REVIEW` for manual handling. Automatic refunds and stock reservation are intentionally out of scope.
 
 Local Stripe CLI workflow:
 
@@ -327,6 +377,127 @@ stripe listen --forward-to localhost:5000/api/v1/webhooks/stripe
 Copy the printed `whsec_...` value into `backend/.env` as `STRIPE_WEBHOOK_SECRET`, then use a Stripe test card in hosted Checkout. The success page should show confirmation pending until the webhook updates the backend.
 
 Detailed flow notes are documented in [docs/payment-flow.md](docs/payment-flow.md).
+
+## Testing, Security And Observability
+
+Phase 11 adds focused backend security regressions, frontend Vitest coverage and a critical-flow verification matrix. Details are documented in [docs/testing-security.md](docs/testing-security.md).
+
+Phase 12 adds structured JSON logs, request-id propagation, readiness checks and targeted performance tuning without adding a large observability stack. Details are documented in [docs/performance.md](docs/performance.md).
+
+## Docker, CI/CD And Deployment
+
+Phase 13 targets Vercel for the Vite frontend, Render for the Dockerized backend, and MongoDB Atlas for the managed database. GitHub Actions runs the deployment safety checks on pull requests and pushes to `main`.
+
+### Backend Docker Image
+
+Build the production backend image from the repository root:
+
+```bash
+docker build -f backend/Dockerfile -t mern-ecommerce-backend:phase13 .
+```
+
+The image uses a multi-stage build, installs production dependencies only for `@mern-ecommerce/backend`, runs as the non-root `node` user, starts `node dist/server.js`, and includes a healthcheck against `/api/v1/health`. The root `.dockerignore` excludes local env files, dependencies, build outputs, caches, logs and test artifacts from the Docker build context.
+
+### GitHub Actions CI
+
+The workflow in `.github/workflows/ci.yml` runs:
+
+```bash
+pnpm lint
+pnpm type-check
+pnpm --filter @mern-ecommerce/backend test
+pnpm --filter @mern-ecommerce/frontend test
+pnpm test:integration
+pnpm build
+docker build -f backend/Dockerfile -t mern-ecommerce-backend:ci .
+```
+
+Integration tests start a local MongoDB 7 single-node replica set in CI. Production secrets are not required or used by the workflow; test and mock values come from the existing test setup.
+
+### Vercel Frontend
+
+Use these Vercel settings:
+
+```text
+Root Directory: frontend
+Build Command: pnpm build
+Output Directory: dist
+Environment: VITE_API_BASE_URL=https://<render-backend-host>/api/v1
+```
+
+From the repository root, the equivalent frontend build command is `pnpm --filter @mern-ecommerce/frontend build` and the output path is `frontend/dist`.
+
+`frontend/vercel.json` rewrites all routes to `/index.html`, so React Router direct navigation and reloads keep working for routes such as `/products`, `/orders` and `/payment/success?...`.
+
+Client environment variables must stay public-only. Do not add Stripe secret keys, JWT secrets or database credentials to `VITE_*` variables. This app does not need `VITE_STRIPE_PUBLISHABLE_KEY` because Stripe Checkout sessions are created by the backend and the client only follows the returned Checkout URL.
+
+### Render Backend
+
+Deploy the backend as a Render Docker web service:
+
+```text
+Dockerfile Path: backend/Dockerfile
+Health Check Path: /api/v1/health
+Readiness URL: https://<render-backend-host>/api/v1/ready
+```
+
+Set production environment variables in Render, not in git:
+
+```env
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<database>?retryWrites=true&w=majority
+CLIENT_URL=https://<vercel-frontend-host>
+LOG_LEVEL=info
+JWT_ACCESS_SECRET=<long-random-secret>
+JWT_ACCESS_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN_DAYS=7
+COOKIE_SECURE=true
+COOKIE_SAME_SITE=none
+STRIPE_SECRET_KEY=sk_live_or_test_value
+STRIPE_WEBHOOK_SECRET=whsec_value_for_render_endpoint
+STRIPE_SUCCESS_URL=https://<vercel-frontend-host>/payment/success?orderId={ORDER_ID}
+STRIPE_CANCEL_URL=https://<vercel-frontend-host>/payment/cancel?orderId={ORDER_ID}
+CLOUDINARY_CLOUD_NAME=<cloud-name>
+CLOUDINARY_API_KEY=<api-key>
+CLOUDINARY_API_SECRET=<api-secret>
+CLOUDINARY_PRODUCT_FOLDER=ecommerce/products
+```
+
+`CLIENT_URL` must be the exact Vercel origin so production CORS only accepts the deployed frontend. Because Vercel and Render are different sites, keep Axios `withCredentials=true`, use HTTPS, set `COOKIE_SECURE=true`, and use `COOKIE_SAME_SITE=none` for the refresh-token cookie.
+
+Swagger UI is currently available at `/api-docs`. Keep it public only for demo/internal environments; protect or disable it in a later phase if the production deployment needs restricted API docs.
+
+### MongoDB Atlas
+
+Create a least-privilege Atlas database user for the app database and allow only required network access. After the backend has valid Atlas credentials, synchronize indexes explicitly:
+
+```bash
+pnpm db:indexes
+```
+
+Do not run `pnpm db:seed:reset` against production or shared Atlas databases. Demo seed data should only be run manually and intentionally.
+
+### Stripe Production/Test Deployment
+
+Create a Stripe webhook endpoint for the Render backend:
+
+```text
+https://<render-backend-host>/api/v1/webhooks/stripe
+```
+
+Copy the endpoint-specific signing secret into `STRIPE_WEBHOOK_SECRET`. The success and cancel URLs should point to the Vercel frontend and include `{ORDER_ID}` exactly as shown in the env example.
+
+### Deployment Smoke Checklist
+
+- CI is green on the target commit.
+- Vercel frontend loads and deep links reload correctly.
+- `GET https://<render-backend-host>/api/v1/health` returns 200.
+- `GET https://<render-backend-host>/api/v1/ready` returns 200 after Atlas and Stripe config are set.
+- Register/login sets an HttpOnly secure refresh cookie and authenticated API calls include credentials.
+- Stripe test Checkout completes and the signed webhook updates payment/order state.
+- `pnpm db:indexes` has run against the deployed database.
+- No secrets are committed to git or exposed through Vite client variables.
 
 ## Database Foundation
 
@@ -384,8 +555,8 @@ The reset script refuses to run when `NODE_ENV=production`.
 
 ## Current Project Status
 
-Phase 8 includes authentication, authorization, public catalog reads, admin category/product management APIs, customer storefront catalog browsing, authenticated customer cart behavior, checkout, pending order/payment creation, customer order history/detail and Stripe hosted Checkout with idempotent webhook confirmation. The storefront uses TanStack Query for catalog/cart/order/payment server state and URL search params for catalog and order pagination. Image upload, variants, reviews, wishlist APIs and unpaid-order stock release are intentionally not implemented yet.
+Phase 12 includes authentication, authorization, public catalog reads, admin category/product management APIs, customer storefront catalog browsing, authenticated customer cart behavior, checkout, pending order/payment creation, customer order history/detail, Stripe hosted Checkout, inventory-safe webhook payment finalization, admin product/inventory/order screens, a basic admin dashboard, structured JSON logging, liveness/readiness probes and targeted frontend/backend performance tuning. The frontend uses TanStack Query for catalog/cart/order/payment/admin server state and URL search params for listing filters and pagination. Image upload, variants, reviews, wishlist APIs, stock reservation, realtime dashboard updates, automatic refund workflows and a large observability stack are intentionally not implemented yet.
 
 ## Next Phase
 
-Phase 9 should address Inventory Consistency, including unpaid/cancelled order stock release policy.
+The next phase should add operational handling for `PAYMENT_REVIEW`, such as review resolution, manual refund support, customer messaging and audit/history around fulfillment failures.

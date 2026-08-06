@@ -20,6 +20,10 @@ export interface AppConfig {
   stripeWebhookSecret?: string;
   stripeSuccessUrl?: string;
   stripeCancelUrl?: string;
+  cloudinaryCloudName?: string;
+  cloudinaryApiKey?: string;
+  cloudinaryApiSecret?: string;
+  cloudinaryProductFolder: string;
 }
 
 let cachedConfig: AppConfig | null = null;
@@ -115,7 +119,11 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
     stripeSecretKey: env.STRIPE_SECRET_KEY,
     stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
     stripeSuccessUrl: env.STRIPE_SUCCESS_URL,
-    stripeCancelUrl: env.STRIPE_CANCEL_URL
+    stripeCancelUrl: env.STRIPE_CANCEL_URL,
+    cloudinaryCloudName: env.CLOUDINARY_CLOUD_NAME,
+    cloudinaryApiKey: env.CLOUDINARY_API_KEY,
+    cloudinaryApiSecret: env.CLOUDINARY_API_SECRET,
+    cloudinaryProductFolder: env.CLOUDINARY_PRODUCT_FOLDER ?? "ecommerce/products"
   };
 };
 

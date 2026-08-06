@@ -25,6 +25,7 @@ interface SeedProduct {
   slug: string;
   description: string;
   categorySlug: string;
+  roomType?: "LIVING_ROOM" | "BEDROOM" | "DINING_ROOM" | "WORKING_ROOM" | "OUTDOOR" | "DECOR";
   priceMinor: number;
   stockQuantity: number;
   status?: "ACTIVE" | "INACTIVE";
@@ -36,7 +37,7 @@ interface SeedResult {
   updated: number;
 }
 
-const placeholderImage = (slug: string): string => `https://placehold.co/800x600/png?text=${encodeURIComponent(slug)}`;
+const placeholderImage = (label: string): string => `https://placehold.co/800x600/FAF8F5/171717/png?text=${encodeURIComponent(label)}`;
 
 const getSeedAccounts = (): SeedAccount[] => [
   {
@@ -55,74 +56,108 @@ const getSeedAccounts = (): SeedAccount[] => [
 
 const seedCategories: SeedCategory[] = [
   {
-    name: "Keyboards",
-    slug: "keyboards",
-    description: "Mechanical and productivity keyboards for daily work and gaming."
+    name: "Sofa phòng khách",
+    slug: "sofa-phong-khach",
+    description: "Sofa vải, sofa module và ghế thư giãn cho căn hộ hiện đại."
   },
   {
-    name: "Mice",
-    slug: "mice",
-    description: "Wired and wireless mice for gaming and office setups."
+    name: "Giường và tủ",
+    slug: "giuong-va-tu",
+    description: "Giường ngủ, tủ đầu giường và giải pháp lưu trữ gọn cho phòng ngủ."
   },
   {
-    name: "Audio",
-    slug: "audio",
-    description: "Headphones and audio accessories for focused work."
+    name: "Bàn ăn căn hộ",
+    slug: "ban-an-can-ho",
+    description: "Bàn ăn và ghế ăn nhỏ gọn, dễ phối cho không gian chung cư."
   },
   {
-    name: "Monitors",
-    slug: "monitors",
-    description: "Displays for productivity and entertainment."
+    name: "Decor tối giản",
+    slug: "decor-toi-gian",
+    description: "Đèn, kệ và vật dụng trang trí tạo điểm nhấn nhẹ cho căn hộ."
   }
 ];
 
 const seedProducts: SeedProduct[] = [
   {
-    name: "Mechanical Gaming Keyboard",
-    slug: "mechanical-gaming-keyboard",
-    description: "Compact mechanical keyboard with tactile switches and durable keycaps.",
-    categorySlug: "keyboards",
-    priceMinor: 8999,
-    stockQuantity: 24,
-    imageUrl: placeholderImage("mechanical-gaming-keyboard")
-  },
-  {
-    name: "Wireless Gaming Mouse",
-    slug: "wireless-gaming-mouse",
-    description: "Lightweight wireless mouse with precise tracking and long battery life.",
-    categorySlug: "mice",
-    priceMinor: 4999,
-    stockQuantity: 3,
-    imageUrl: placeholderImage("wireless-gaming-mouse")
-  },
-  {
-    name: "USB-C Headphones",
-    slug: "usb-c-headphones",
-    description: "Wired USB-C headphones with clear microphone input for calls.",
-    categorySlug: "audio",
-    priceMinor: 2999,
-    stockQuantity: 0,
-    imageUrl: placeholderImage("usb-c-headphones")
-  },
-  {
-    name: "27-inch Monitor",
-    slug: "27-inch-monitor",
-    description: "Crisp 27-inch display with slim bezels for productivity desks.",
-    categorySlug: "monitors",
-    priceMinor: 19999,
+    name: "Sofa module vải Linen",
+    slug: "sofa-module-vai-linen",
+    description: "Sofa module ba chỗ ngồi với bề mặt vải linen, dáng thấp và phần tựa rộng cho phòng khách căn hộ.",
+    categorySlug: "sofa-phong-khach",
+    roomType: "LIVING_ROOM",
+    priceMinor: 89900,
     stockQuantity: 12,
-    imageUrl: placeholderImage("27-inch-monitor")
+    imageUrl: placeholderImage("Sofa module vai Linen")
   },
   {
-    name: "Legacy Wired Mouse",
-    slug: "legacy-wired-mouse",
-    description: "Inactive demo product retained to exercise product visibility rules.",
-    categorySlug: "mice",
-    priceMinor: 1599,
-    stockQuantity: 50,
+    name: "Ghế thư giãn gỗ Ash",
+    slug: "ghe-thu-gian-go-ash",
+    description: "Ghế thư giãn khung gỗ ash, đệm rời màu trung tính và kích thước phù hợp góc đọc sách.",
+    categorySlug: "sofa-phong-khach",
+    roomType: "LIVING_ROOM",
+    priceMinor: 32900,
+    stockQuantity: 3,
+    imageUrl: placeholderImage("Ghe thu gian go Ash")
+  },
+  {
+    name: "Giường hộc kéo Oak",
+    slug: "giuong-hoc-keo-oak",
+    description: "Giường ngủ khung oak veneer có hai hộc kéo dưới gầm, tối ưu lưu trữ cho phòng ngủ nhỏ.",
+    categorySlug: "giuong-va-tu",
+    roomType: "BEDROOM",
+    priceMinor: 74900,
+    stockQuantity: 0,
+    imageUrl: placeholderImage("Giuong hoc keo Oak")
+  },
+  {
+    name: "Bàn ăn mở rộng Nordic",
+    slug: "ban-an-mo-rong-nordic",
+    description: "Bàn ăn bốn đến sáu chỗ với mặt gỗ sáng, chân bo nhẹ và cơ chế mở rộng cho bữa ăn gia đình.",
+    categorySlug: "ban-an-can-ho",
+    roomType: "DINING_ROOM",
+    priceMinor: 58900,
+    stockQuantity: 9,
+    imageUrl: placeholderImage("Ban an mo rong Nordic")
+  },
+  {
+    name: "Đèn bàn gốm matte",
+    slug: "den-ban-gom-matte",
+    description: "Đèn bàn thân gốm matte, ánh sáng ấm và chụp vải dệt cho bàn console hoặc kệ đầu giường.",
+    categorySlug: "decor-toi-gian",
+    roomType: "DECOR",
+    priceMinor: 12900,
+    stockQuantity: 24,
+    imageUrl: placeholderImage("Den ban gom matte")
+  },
+  {
+    name: "Kệ trang trí treo tường",
+    slug: "ke-trang-tri-treo-tuong",
+    description: "Kệ treo tường thanh mảnh cho sách nhỏ, bình gốm và vật dụng trang trí nhẹ.",
+    categorySlug: "decor-toi-gian",
+    roomType: "DECOR",
+    priceMinor: 6900,
+    stockQuantity: 18,
+    imageUrl: placeholderImage("Ke trang tri treo tuong")
+  },
+  {
+    name: "Tủ đầu giường Legacy",
+    slug: "tu-dau-giuong-legacy",
+    description: "Sản phẩm nội thất demo không còn bán, được giữ inactive để kiểm tra quy tắc hiển thị catalog.",
+    categorySlug: "giuong-va-tu",
+    roomType: "BEDROOM",
+    priceMinor: 9900,
+    stockQuantity: 6,
     status: "INACTIVE",
-    imageUrl: placeholderImage("legacy-wired-mouse")
+    imageUrl: placeholderImage("Tu dau giuong Legacy")
   }
+];
+
+const legacyDemoCategorySlugs = ["keyboards", "mice", "audio", "monitors"];
+const legacyDemoProductSlugs = [
+  "mechanical-gaming-keyboard",
+  "wireless-gaming-mouse",
+  "usb-c-headphones",
+  "27-inch-monitor",
+  "legacy-wired-mouse"
 ];
 
 const countResult = (matchedCount: number, upsertedCount: number): SeedResult => ({
@@ -188,6 +223,11 @@ const getCategoryIdsBySlug = async (): Promise<Map<string, Types.ObjectId>> => {
   return new Map(categories.map((category) => [category.slug, category._id]));
 };
 
+const deactivateLegacyDemoCatalog = async (): Promise<void> => {
+  await ProductModel.updateMany({ slug: { $in: legacyDemoProductSlugs } }, { $set: { status: "INACTIVE" } }, { runValidators: true }).exec();
+  await CategoryModel.updateMany({ slug: { $in: legacyDemoCategorySlugs } }, { $set: { status: "INACTIVE" } }, { runValidators: true }).exec();
+};
+
 const seedProductDocuments = async (): Promise<SeedResult> => {
   const totals: SeedResult = { created: 0, updated: 0 };
   const categoryIdsBySlug = await getCategoryIdsBySlug();
@@ -207,6 +247,7 @@ const seedProductDocuments = async (): Promise<SeedResult> => {
           slug: product.slug,
           description: product.description,
           categoryId,
+          ...(product.roomType ? { roomType: product.roomType } : {}),
           priceMinor: product.priceMinor,
           currency: DEFAULT_CURRENCY,
           stockQuantity: product.stockQuantity,
@@ -235,13 +276,14 @@ const assertResetAllowed = (nodeEnv: NodeEnv): void => {
 };
 
 const resetSeedCollections = async (): Promise<void> => {
-  await ProductModel.deleteMany({ slug: { $in: seedProducts.map((product) => product.slug) } });
-  await CategoryModel.deleteMany({ slug: { $in: seedCategories.map((category) => category.slug) } });
+  await ProductModel.deleteMany({ slug: { $in: [...seedProducts.map((product) => product.slug), ...legacyDemoProductSlugs] } });
+  await CategoryModel.deleteMany({ slug: { $in: [...seedCategories.map((category) => category.slug), ...legacyDemoCategorySlugs] } });
   await UserModel.deleteMany({ email: { $in: getSeedAccounts().map((account) => account.email.toLowerCase()) } });
 };
 
 export const seedDatabase = async (): Promise<void> => {
   await syncDatabaseIndexes();
+  await deactivateLegacyDemoCatalog();
 
   const users = await seedUsers();
   const categories = await seedCategoryDocuments();

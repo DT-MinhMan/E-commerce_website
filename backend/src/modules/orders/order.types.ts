@@ -21,6 +21,17 @@ export interface OrderListQuery {
   limit: number;
 }
 
+export interface AdminOrderListQuery extends OrderListQuery {
+  orderStatus?: OrderStatus;
+  paymentStatus?: PaymentStatus;
+  q?: string;
+}
+
+export interface AdminOrderStatusUpdateInput {
+  nextStatus: OrderStatus;
+  expectedCurrentStatus: OrderStatus;
+}
+
 export interface OrderItemResponse {
   productId: string;
   productName: string;
@@ -44,6 +55,7 @@ export interface ShippingAddressResponse {
 
 export interface OrderResponse {
   id: string;
+  userId: string;
   orderNumber: string;
   items: OrderItemResponse[];
   shippingAddress: ShippingAddressResponse;

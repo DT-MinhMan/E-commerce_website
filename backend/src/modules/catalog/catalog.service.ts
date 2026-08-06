@@ -9,6 +9,8 @@ import type {
   PaginationMeta,
   ProductInput,
   ProductListQuery,
+  ProductStatusUpdateInput,
+  ProductStockUpdateInput,
   ProductUpdateInput
 } from "./catalog.types.js";
 
@@ -41,6 +43,7 @@ interface ProductResponse {
   slug: string;
   description: string;
   categoryId: string;
+  roomType?: string;
   priceMinor: number;
   currency: string;
   stockQuantity: number;
@@ -95,6 +98,7 @@ const toProductResponse = (product: ProductRecord): ProductResponse => ({
   slug: product.slug,
   description: product.description,
   categoryId: product.categoryId.toString(),
+  roomType: product.roomType,
   priceMinor: product.priceMinor,
   currency: product.currency,
   stockQuantity: product.stockQuantity,
@@ -105,7 +109,8 @@ const toProductResponse = (product: ProductRecord): ProductResponse => ({
 });
 
 const categorySelect = "_id name slug description status createdAt updatedAt";
-const productSelect = "_id name slug description categoryId priceMinor currency stockQuantity images status createdAt updatedAt";
+const productSelect = "_id name slug description categoryId roomType priceMinor currency stockQuantity images status createdAt updatedAt";
+const lowStockThreshold = 5;
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -138,6 +143,11 @@ const resolveActiveCategoryIdBySlug = async (slug: string): Promise<Types.Object
   return category?._id ?? null;
 };
 
+const resolveCategoryIdBySlug = async (slug: string): Promise<Types.ObjectId | null> => {
+  const category = await CategoryModel.findOne({ slug }).select("_id").lean<CategoryRecord>().exec();
+  return category?._id ?? null;
+};
+
 const buildProductListFilter = async (query: ProductListQuery, publicOnly: boolean): Promise<FilterQuery<Product>> => {
   const filter: FilterQuery<Product> = {};
 
@@ -149,8 +159,29 @@ const buildProductListFilter = async (query: ProductListQuery, publicOnly: boole
     } else {
       filter.categoryId = { $in: await getActiveCategoryIds() };
     }
-  } else if (query.status) {
-    filter.status = query.status;
+  } else {
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    if (query.category) {
+      const categoryId = await resolveCategoryIdBySlug(query.category);
+      filter.categoryId = categoryId ?? { $in: [] };
+    }
+  }
+
+  if (query.roomType) {
+    filter.roomType = query.roomType;
+  }
+
+  if (!publicOnly && query.stockState) {
+    if (query.stockState === "out_of_stock") {
+      filter.stockQuantity = 0;
+    } else if (query.stockState === "low_stock") {
+      filter.stockQuantity = { $gt: 0, $lte: lowStockThreshold };
+    } else {
+      filter.stockQuantity = { $gt: 0 };
+    }
   }
 
   if (query.minPriceMinor !== undefined || query.maxPriceMinor !== undefined) {
@@ -166,7 +197,8 @@ const buildProductListFilter = async (query: ProductListQuery, publicOnly: boole
   }
 
   if (query.q) {
-    filter.name = { $regex: escapeRegex(query.q), $options: "i" };
+    const pattern = { $regex: escapeRegex(query.q), $options: "i" };
+    filter.$or = [{ name: pattern }, { description: pattern }];
   }
 
   return filter;
@@ -177,6 +209,18 @@ const assertCategoryUsableForProduct = async (categoryId: string, nextProductSta
 
   if (!category || (nextProductStatus === "ACTIVE" && category.status !== "ACTIVE")) {
     throw new AppError(400, "PRODUCT_CATEGORY_INVALID", "Product category is invalid");
+  }
+};
+
+const assertCategoryCanBecomeInactive = async (categoryId: string): Promise<void> => {
+  const activeProductCount = await ProductModel.countDocuments({ categoryId, status: "ACTIVE" }).exec();
+
+  if (activeProductCount > 0) {
+    throw new AppError(
+      409,
+      "CATEGORY_HAS_ACTIVE_PRODUCTS",
+      "Category has active products. Move or deactivate those products before deactivating this category."
+    );
   }
 };
 
@@ -201,6 +245,10 @@ export const createCategory = async (input: CategoryInput): Promise<CategoryResp
 };
 
 export const updateCategory = async (id: string, input: CategoryUpdateInput): Promise<CategoryResponse> => {
+  if (input.status === "INACTIVE") {
+    await assertCategoryCanBecomeInactive(id);
+  }
+
   try {
     const category = await CategoryModel.findByIdAndUpdate(id, { $set: input }, { new: true, runValidators: true })
       .select(categorySelect)
@@ -222,6 +270,8 @@ export const updateCategory = async (id: string, input: CategoryUpdateInput): Pr
 };
 
 export const deactivateCategory = async (id: string): Promise<CategoryResponse> => {
+  await assertCategoryCanBecomeInactive(id);
+
   const category = await CategoryModel.findByIdAndUpdate(id, { $set: { status: "INACTIVE" } }, { new: true, runValidators: true })
     .select(categorySelect)
     .lean<CategoryRecord>()
@@ -278,6 +328,16 @@ export const listAdminProducts = async (query: ProductListQuery): Promise<Pagina
   };
 };
 
+export const getAdminProductById = async (id: string): Promise<ProductResponse> => {
+  const product = await ProductModel.findById(id).select(productSelect).lean<ProductRecord>().exec();
+
+  if (!product) {
+    throw new AppError(404, "PRODUCT_NOT_FOUND", "Product not found");
+  }
+
+  return toProductResponse(product);
+};
+
 export const createProduct = async (input: ProductInput): Promise<ProductResponse> => {
   await assertCategoryUsableForProduct(input.categoryId, input.status ?? "ACTIVE");
 
@@ -318,6 +378,44 @@ export const updateProduct = async (id: string, input: ProductUpdateInput): Prom
 
     return mapProductWriteError(error);
   }
+};
+
+export const updateProductStock = async (id: string, input: ProductStockUpdateInput): Promise<ProductResponse> => {
+  const product = await ProductModel.findByIdAndUpdate(
+    id,
+    { $set: { stockQuantity: input.stockQuantity } },
+    { new: true, runValidators: true }
+  )
+    .select(productSelect)
+    .lean<ProductRecord>()
+    .exec();
+
+  if (!product) {
+    throw new AppError(404, "PRODUCT_NOT_FOUND", "Product not found");
+  }
+
+  return toProductResponse(product);
+};
+
+export const updateProductStatus = async (id: string, input: ProductStatusUpdateInput): Promise<ProductResponse> => {
+  const current = await ProductModel.findById(id).select(productSelect).lean<ProductRecord>().exec();
+
+  if (!current) {
+    throw new AppError(404, "PRODUCT_NOT_FOUND", "Product not found");
+  }
+
+  await assertCategoryUsableForProduct(current.categoryId.toString(), input.status);
+
+  const product = await ProductModel.findByIdAndUpdate(id, { $set: { status: input.status } }, { new: true, runValidators: true })
+    .select(productSelect)
+    .lean<ProductRecord>()
+    .exec();
+
+  if (!product) {
+    throw new AppError(404, "PRODUCT_NOT_FOUND", "Product not found");
+  }
+
+  return toProductResponse(product);
 };
 
 export const deactivateProduct = async (id: string): Promise<ProductResponse> => {

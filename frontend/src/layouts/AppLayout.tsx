@@ -1,46 +1,23 @@
-import { NavLink, Outlet } from "react-router-dom";
-import { useLogout } from "../hooks/useAuthQueries.js";
-import { useCartQuery } from "../hooks/useCartQueries.js";
-import { useAuthStore } from "../store/authStore.js";
+import { Outlet } from "react-router-dom";
+import { AdminHeader } from "../components/layout/AdminHeader.js";
+import { StorefrontFooter } from "../components/layout/StorefrontFooter.js";
+import { StorefrontHeader } from "../components/layout/StorefrontHeader.js";
+import { useAuthStore } from "../features/auth/store/authStore.js";
+import { useCategoriesQuery } from "../features/catalog/hooks/useCatalogQueries.js";
 
 export const AppLayout = () => {
-  const status = useAuthStore((state) => state.status);
+  const categoriesQuery = useCategoriesQuery();
+  const categories = categoriesQuery.data ?? [];
   const user = useAuthStore((state) => state.user);
-  const logout = useLogout();
-  const cartQuery = useCartQuery();
-  const cartCount = cartQuery.data?.itemCount ?? 0;
+  const isAdmin = user?.role === "ADMIN";
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div>
-          <p className="eyebrow">Phase 5</p>
-          <h1>MERN E-commerce Platform</h1>
-        </div>
-        <nav className="nav-links" aria-label="Primary navigation">
-          <NavLink to="/">Home</NavLink>
-          <NavLink to="/products">Products</NavLink>
-          {user ? (
-            <>
-              <NavLink to="/cart">Cart{cartCount > 0 ? ` (${cartCount})` : ""}</NavLink>
-              <NavLink to="/orders">Orders</NavLink>
-              <NavLink to="/account">Account</NavLink>
-              {user.role === "ADMIN" && <NavLink to="/admin">Admin</NavLink>}
-              <button type="button" onClick={() => logout.mutate()} disabled={status === "loading"}>
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <NavLink to="/login">Login</NavLink>
-              <NavLink to="/register">Register</NavLink>
-            </>
-          )}
-        </nav>
-      </header>
+      {isAdmin ? <AdminHeader /> : <StorefrontHeader categories={categories} />}
       <main className="app-main">
         <Outlet />
       </main>
+      {!isAdmin && <StorefrontFooter categories={categories} />}
     </div>
   );
 };

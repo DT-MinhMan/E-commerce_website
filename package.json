@@ -10,7 +10,7 @@
     "dev:frontend": "pnpm --filter @mern-ecommerce/frontend dev",
     "lint": "pnpm --filter @mern-ecommerce/backend lint && pnpm --filter @mern-ecommerce/frontend lint",
     "type-check": "pnpm --filter @mern-ecommerce/backend type-check && pnpm --filter @mern-ecommerce/frontend type-check",
-    "test": "pnpm --filter @mern-ecommerce/backend test",
+    "test": "pnpm --filter @mern-ecommerce/backend test && pnpm --filter @mern-ecommerce/frontend test",
     "test:integration": "pnpm --filter @mern-ecommerce/backend test:integration",
     "build": "pnpm --filter @mern-ecommerce/backend build && pnpm --filter @mern-ecommerce/frontend build",
     "db:indexes": "pnpm --filter @mern-ecommerce/backend db:indexes",
@@ -19,5 +19,10 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "brace-expansion": "1.1.17"
+    }
   }
 }

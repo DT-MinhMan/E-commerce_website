@@ -10,6 +10,9 @@ export type CategoryStatus = (typeof CATEGORY_STATUSES)[number];
 export const PRODUCT_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
 
+export const ROOM_TYPES = ["LIVING_ROOM", "BEDROOM", "DINING_ROOM", "WORKING_ROOM", "OUTDOOR", "DECOR"] as const;
+export type RoomType = (typeof ROOM_TYPES)[number];
+
 export const ORDER_STATUSES = [
   "PENDING_PAYMENT",
   "PAID",

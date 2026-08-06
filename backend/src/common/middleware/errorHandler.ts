@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import type { AppConfig } from "../../config/env.js";
 import { AppError } from "../errors/AppError.js";
+import { logger } from "../logger.js";
 import type { ErrorResponse } from "../utils/apiResponse.js";
 
 export const errorHandler =
@@ -11,16 +12,14 @@ export const errorHandler =
         ? error
         : new AppError(500, "INTERNAL_SERVER_ERROR", "An unexpected error occurred", null, false);
 
-    if (!appError.isOperational && config.logLevel !== "silent") {
+    if (!appError.isOperational) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(
-        JSON.stringify({
-          level: "error",
-          requestId: req.requestId,
-          message,
-          stack: config.nodeEnv === "development" && error instanceof Error ? error.stack : undefined
-        })
-      );
+      logger.error(config, message, {
+        requestId: req.requestId,
+        userId: req.currentUser?.userId,
+        errorCode: appError.code,
+        stack: config.nodeEnv === "development" && error instanceof Error ? error.stack : undefined
+      });
     }
 
     const response: ErrorResponse = {

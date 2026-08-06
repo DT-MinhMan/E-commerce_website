@@ -5,13 +5,16 @@ import {
   createProduct,
   deactivateCategory,
   deactivateProduct,
+  getAdminProductById,
   getPublicProductBySlug,
   listAdminCategories,
   listAdminProducts,
   listPublicCategories,
   listPublicProducts,
   updateCategory,
-  updateProduct
+  updateProduct,
+  updateProductStatus,
+  updateProductStock
 } from "./catalog.service.js";
 import {
   parseCategoryCreateInput,
@@ -20,6 +23,8 @@ import {
   parseObjectIdParam,
   parseProductCreateInput,
   parseProductListQuery,
+  parseProductStatusUpdateInput,
+  parseProductStockUpdateInput,
   parseProductUpdateInput,
   parseSlugParam
 } from "./catalog.validation.js";
@@ -95,6 +100,15 @@ export const listAdminProductsController = async (req: Request, res: Response, n
   }
 };
 
+export const getAdminProductController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const id = parseObjectIdParam(routeParam(req.params.id));
+    res.status(200).json(successResponse({ product: await getAdminProductById(id) }));
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createProductController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     res.status(201).json(successResponse({ product: await createProduct(parseProductCreateInput(req.body)) }));
@@ -107,6 +121,24 @@ export const updateProductController = async (req: Request, res: Response, next:
   try {
     const id = parseObjectIdParam(routeParam(req.params.id));
     res.status(200).json(successResponse({ product: await updateProduct(id, parseProductUpdateInput(req.body)) }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProductStockController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const id = parseObjectIdParam(routeParam(req.params.id));
+    res.status(200).json(successResponse({ product: await updateProductStock(id, parseProductStockUpdateInput(req.body)) }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProductStatusController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const id = parseObjectIdParam(routeParam(req.params.id));
+    res.status(200).json(successResponse({ product: await updateProductStatus(id, parseProductStatusUpdateInput(req.body)) }));
   } catch (error) {
     next(error);
   }

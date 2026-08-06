@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import type Stripe from "stripe";
 import { AppError } from "../../common/errors/AppError.js";
+import { logger, type LogFields } from "../../common/logger.js";
 import { getConfig, type AppConfig } from "../../config/env.js";
 import { OrderModel, type Order } from "../orders/order.model.js";
 import { PaymentModel, type Payment } from "./payment.model.js";
@@ -107,7 +108,8 @@ const buildMetadata = (order: OrderRecord, payment: PaymentRecord): Record<strin
 export const createCheckoutSession = async (
   userId: string,
   orderId: string,
-  config: AppConfig = getConfig()
+  config: AppConfig = getConfig(),
+  logContext: LogFields = {}
 ): Promise<CheckoutSessionResponse> => {
   const order = await findOwnedOrder(userId, orderId);
 
@@ -159,6 +161,14 @@ export const createCheckoutSession = async (
     },
     { runValidators: true }
   ).exec();
+
+  logger.info(config, "Stripe checkout session created", {
+    ...logContext,
+    userId,
+    orderId: order._id.toString(),
+    paymentId: payment._id.toString(),
+    providerCheckoutSessionId: stripeSession.id
+  });
 
   return {
     checkoutUrl: stripeSession.url,

@@ -432,14 +432,53 @@ export const swaggerSpec = (config: AppConfig) => ({
         }
       }
     },
+    "/api/v1/admin/uploads/product-image": {
+      post: {
+        summary: "Upload a product image to Cloudinary",
+        tags: ["Admin Catalog"],
+        security: bearerSecurity,
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ProductImageUploadRequest" }
+            }
+          }
+        },
+        responses: {
+          "201": { description: "Uploaded image", content: { "application/json": { schema: { $ref: "#/components/schemas/ProductImageUploadSuccessResponse" } } } },
+          "400": { description: "Invalid image upload payload", ...errorResponse },
+          "401": { description: "Missing or invalid access token", ...errorResponse },
+          "403": { description: "Admin role required", ...errorResponse },
+          "500": { description: "Cloudinary is not configured", ...errorResponse },
+          "502": { description: "Cloudinary upload failed", ...errorResponse }
+        }
+      }
+    },
     "/api/v1/health": {
       get: {
-        summary: "Check API and database health",
+        summary: "Check API liveness",
         tags: ["Health"],
         responses: {
           "200": {
             description: "Health status",
             content: { "application/json": { schema: { $ref: "#/components/schemas/HealthSuccessResponse" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/ready": {
+      get: {
+        summary: "Check API readiness",
+        tags: ["Health"],
+        responses: {
+          "200": {
+            description: "Ready for traffic",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ReadinessSuccessResponse" } } }
+          },
+          "503": {
+            description: "Not ready for traffic",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ReadinessSuccessResponse" } } }
           }
         }
       }
@@ -511,7 +550,32 @@ export const swaggerSpec = (config: AppConfig) => ({
                 type: "object",
                 properties: {
                   status: { type: "string", example: "ok" },
-                  database: { type: "string", example: "connected" },
+                  environment: { type: "string", example: "development" },
+                  timestamp: { type: "string", format: "date-time" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      ReadinessSuccessResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/StandardSuccessResponse" },
+          {
+            type: "object",
+            properties: {
+              data: {
+                type: "object",
+                properties: {
+                  status: { type: "string", enum: ["ready", "not_ready"], example: "ready" },
+                  database: { type: "string", enum: ["connected", "disconnected"], example: "connected" },
+                  dependencies: {
+                    type: "object",
+                    properties: {
+                      mongodb: { type: "string", enum: ["ready", "unavailable"], example: "ready" },
+                      stripeConfig: { type: "string", enum: ["configured", "missing"], example: "configured" }
+                    }
+                  },
                   environment: { type: "string", example: "development" },
                   timestamp: { type: "string", format: "date-time" }
                 }
@@ -572,7 +636,16 @@ export const swaggerSpec = (config: AppConfig) => ({
         type: "object",
         properties: {
           url: { type: "string", format: "uri", example: "https://example.com/keyboard.png" },
-          alt: { type: "string", example: "Mechanical keyboard" }
+          alt: { type: "string", example: "Mechanical keyboard" },
+          publicId: { type: "string", example: "ecommerce/products/mechanical-keyboard-1722440000" }
+        }
+      },
+      ProductImageUploadRequest: {
+        type: "object",
+        required: ["dataUri"],
+        properties: {
+          dataUri: { type: "string", example: "data:image/png;base64,iVBORw0KGgo..." },
+          fileName: { type: "string", example: "keyboard.png" }
         }
       },
       Product: {
@@ -775,6 +848,12 @@ export const swaggerSpec = (config: AppConfig) => ({
               meta: { $ref: "#/components/schemas/PaginationMeta" }
             }
           }
+        ]
+      },
+      ProductImageUploadSuccessResponse: {
+        allOf: [
+          { $ref: "#/components/schemas/StandardSuccessResponse" },
+          { type: "object", properties: { data: { type: "object", properties: { image: { $ref: "#/components/schemas/ProductImage" } } } } }
         ]
       },
       CartSuccessResponse: {

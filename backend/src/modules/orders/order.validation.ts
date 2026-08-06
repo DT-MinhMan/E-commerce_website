@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { AppError } from "../../common/errors/AppError.js";
-import type { CheckoutInput, OrderListQuery, ShippingAddressInput } from "./order.types.js";
+import { ORDER_STATUSES, PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "../../database/enums.js";
+import type { AdminOrderListQuery, AdminOrderStatusUpdateInput, CheckoutInput, OrderListQuery, ShippingAddressInput } from "./order.types.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -88,6 +89,53 @@ export const parseOrderListQuery = (query: Record<string, unknown>): OrderListQu
   page: parsePositiveInt(query.page, 1, 1000),
   limit: parsePositiveInt(query.limit, 10, 50)
 });
+
+const parseOptionalEnum = <TValue extends string>(value: unknown, allowed: readonly TValue[], field: string): TValue | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || !allowed.includes(value as TValue)) {
+    throw new AppError(400, "VALIDATION_ERROR", `${field} must be one of: ${allowed.join(", ")}`);
+  }
+
+  return value as TValue;
+};
+
+const parseRequiredEnum = <TValue extends string>(body: Record<string, unknown>, allowed: readonly TValue[], field: string): TValue => {
+  const value = parseOptionalEnum(body[field], allowed, field);
+
+  if (value === undefined) {
+    throw new AppError(400, "VALIDATION_ERROR", `${field} is required`);
+  }
+
+  return value;
+};
+
+export const parseAdminOrderListQuery = (query: Record<string, unknown>): AdminOrderListQuery => {
+  const q = typeof query.q === "string" && query.q.trim().length > 0 ? query.q.trim() : undefined;
+
+  if (query.q !== undefined && typeof query.q !== "string") {
+    throw new AppError(400, "VALIDATION_ERROR", "q must be a string");
+  }
+
+  return {
+    page: parsePositiveInt(query.page, 1, 1000),
+    limit: parsePositiveInt(query.limit, 10, 50),
+    orderStatus: parseOptionalEnum<OrderStatus>(query.orderStatus, ORDER_STATUSES, "orderStatus"),
+    paymentStatus: parseOptionalEnum<PaymentStatus>(query.paymentStatus, PAYMENT_STATUSES, "paymentStatus"),
+    q
+  };
+};
+
+export const parseAdminOrderStatusUpdateInput = (body: unknown): AdminOrderStatusUpdateInput => {
+  const parsed = parseBody(body, ["nextStatus", "expectedCurrentStatus"]);
+
+  return {
+    nextStatus: parseRequiredEnum<OrderStatus>(parsed, ORDER_STATUSES, "nextStatus"),
+    expectedCurrentStatus: parseRequiredEnum<OrderStatus>(parsed, ORDER_STATUSES, "expectedCurrentStatus")
+  };
+};
 
 export const parseOrderIdParam = (value: string | string[] | undefined): string => {
   if (typeof value !== "string" || !Types.ObjectId.isValid(value)) {

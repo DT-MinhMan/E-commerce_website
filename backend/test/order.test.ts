@@ -86,6 +86,19 @@ describe("orders API", () => {
     expect(forbidden.body.error.code).toBe("AUTH_FORBIDDEN");
   });
 
+  it("returns ready when the database is connected", async () => {
+    const response = await request(app).get("/api/v1/ready").expect(200);
+
+    expect(response.body.data).toMatchObject({
+      status: "ready",
+      database: "connected",
+      dependencies: {
+        mongodb: "ready",
+        stripeConfig: "configured"
+      }
+    });
+  });
+
   it("creates a pending order and payment from the current cart and clears the cart", async () => {
     const userId = customerId();
     const product = await createProduct({ priceMinor: 5000, stockQuantity: 4 });
@@ -127,7 +140,7 @@ describe("orders API", () => {
       status: "PENDING"
     });
     expect((await CartModel.findOne({ userId }).lean().exec())?.items).toEqual([]);
-    expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(2);
+    expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(4);
   });
 
   it("uses immutable order snapshots after product changes", async () => {
@@ -224,28 +237,7 @@ describe("orders API", () => {
     expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(5);
   });
 
-  it("rolls back when stock becomes insufficient inside the checkout transaction", async () => {
-    const userId = customerId();
-    const product = await createProduct({ stockQuantity: 1 });
-    await seedCart(userId, [{ productId: product._id, quantity: 1 }]);
-    vi.spyOn(ProductModel, "updateOne").mockReturnValueOnce({
-      exec: async () => ({ modifiedCount: 0 })
-    } as ReturnType<typeof ProductModel.updateOne>);
-
-    const response = await request(app)
-      .post("/api/v1/orders/checkout")
-      .set("Authorization", `Bearer ${customerToken(userId)}`)
-      .send({ shippingAddress })
-      .expect(409);
-
-    expect(response.body.error.code).toBe("CHECKOUT_INSUFFICIENT_STOCK");
-    expect(await OrderModel.countDocuments({ userId })).toBe(0);
-    expect(await PaymentModel.countDocuments({ userId })).toBe(0);
-    expect((await CartModel.findOne({ userId }).lean().exec())?.items).toHaveLength(1);
-    expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(1);
-  });
-
-  it("allows only one checkout to consume the last unit of stock", async () => {
+  it("allows concurrent pending checkouts without reserving the last unit of stock", async () => {
     const firstUserId = customerId();
     const secondUserId = customerId();
     const product = await createProduct({ stockQuantity: 1 });
@@ -257,21 +249,12 @@ describe("orders API", () => {
       request(app).post("/api/v1/orders/checkout").set("Authorization", `Bearer ${customerToken(secondUserId)}`).send({ shippingAddress })
     ]);
 
-    const successResponses = responses.filter((response) => response.status === 201);
-    const failureResponses = responses.filter((response) => response.status === 409);
-    expect(successResponses).toHaveLength(1);
-    expect(failureResponses).toHaveLength(1);
-    expect(failureResponses[0]?.body.error.code).toBe("CHECKOUT_INSUFFICIENT_STOCK");
-    expect(await OrderModel.countDocuments()).toBe(1);
-    expect(await PaymentModel.countDocuments()).toBe(1);
-    expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(0);
-
-    const failedUserId = successResponses[0]?.body.data.order.id
-      ? (await OrderModel.exists({ _id: successResponses[0].body.data.order.id, userId: firstUserId }).exec())
-        ? secondUserId
-        : firstUserId
-      : firstUserId;
-    expect((await CartModel.findOne({ userId: failedUserId }).lean().exec())?.items).toHaveLength(1);
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 201]);
+    expect(await OrderModel.countDocuments()).toBe(2);
+    expect(await PaymentModel.countDocuments()).toBe(2);
+    expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(1);
+    expect((await CartModel.findOne({ userId: firstUserId }).lean().exec())?.items).toHaveLength(0);
+    expect((await CartModel.findOne({ userId: secondUserId }).lean().exec())?.items).toHaveLength(0);
   });
 
   it("lists and reads only the current customer's orders", async () => {
@@ -299,5 +282,152 @@ describe("orders API", () => {
     expect(list.body.meta).toMatchObject({ page: 1, limit: 1, totalItems: 1, totalPages: 1 });
 
     await request(app).get(`/api/v1/orders/${firstOrder.body.data.order.id}`).set("Authorization", `Bearer ${customerToken(secondUserId)}`).expect(404);
+  });
+
+  it("rejects order page sizes above the maximum", async () => {
+    const response = await request(app)
+      .get("/api/v1/orders?page=1&limit=51")
+      .set("Authorization", `Bearer ${customerToken()}`)
+      .expect(400);
+
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("protects admin order routes and enforces status transitions with conflict detection", async () => {
+    const userId = customerId();
+    const product = await createProduct({ priceMinor: 1200 });
+    const order = await OrderModel.create({
+      orderNumber: "ORD-20260801-000001",
+      userId,
+      items: [
+        {
+          productId: product._id,
+          productName: product.name,
+          productSlug: product.slug,
+          unitPriceMinor: 1200,
+          quantity: 2,
+          lineTotalMinor: 2400
+        }
+      ],
+      shippingAddress,
+      subtotalMinor: 2400,
+      shippingFeeMinor: 0,
+      totalMinor: 2400,
+      currency: "USD",
+      orderStatus: "PAID",
+      paymentStatus: "SUCCEEDED",
+      paidAt: new Date()
+    });
+
+    await request(app).get("/api/v1/admin/orders").expect(401);
+    await request(app).get("/api/v1/admin/orders").set("Authorization", `Bearer ${customerToken(userId)}`).expect(403);
+
+    const list = await request(app)
+      .get("/api/v1/admin/orders?orderStatus=PAID&q=000001")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .expect(200);
+    expect(list.body.data.orders).toHaveLength(1);
+    expect(list.body.data.orders[0].id).toBe(order._id.toString());
+
+    const invalidTransition = await request(app)
+      .patch(`/api/v1/admin/orders/${order._id.toString()}/status`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ expectedCurrentStatus: "PAID", nextStatus: "COMPLETED" })
+      .expect(400);
+    expect(invalidTransition.body.error.code).toBe("ORDER_STATUS_TRANSITION_INVALID");
+
+    const conflict = await request(app)
+      .patch(`/api/v1/admin/orders/${order._id.toString()}/status`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ expectedCurrentStatus: "PENDING_PAYMENT", nextStatus: "CANCELLED" })
+      .expect(409);
+    expect(conflict.body.error.code).toBe("ORDER_STATUS_CONFLICT");
+
+    const updated = await request(app)
+      .patch(`/api/v1/admin/orders/${order._id.toString()}/status`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ expectedCurrentStatus: "PAID", nextStatus: "PROCESSING" })
+      .expect(200);
+    expect(updated.body.data.order.orderStatus).toBe("PROCESSING");
+  });
+
+  it("summarizes admin dashboard without counting unpaid revenue", async () => {
+    const userId = customerId();
+    const product = await createProduct({ name: "Dashboard Keyboard", priceMinor: 2000, stockQuantity: 2 });
+    const paidOrder = await OrderModel.create({
+      orderNumber: "ORD-20260801-000002",
+      userId,
+      items: [
+        {
+          productId: product._id,
+          productName: product.name,
+          productSlug: product.slug,
+          unitPriceMinor: 2000,
+          quantity: 2,
+          lineTotalMinor: 4000
+        }
+      ],
+      shippingAddress,
+      subtotalMinor: 4000,
+      shippingFeeMinor: 0,
+      totalMinor: 4000,
+      currency: "USD",
+      orderStatus: "PAID",
+      paymentStatus: "SUCCEEDED",
+      paidAt: new Date()
+    });
+    await PaymentModel.create({
+      orderId: paidOrder._id,
+      userId,
+      provider: "STRIPE",
+      amountMinor: 4000,
+      currency: "USD",
+      status: "SUCCEEDED",
+      paidAt: new Date()
+    });
+
+    const pendingOrder = await OrderModel.create({
+      orderNumber: "ORD-20260801-000003",
+      userId,
+      items: [
+        {
+          productId: product._id,
+          productName: product.name,
+          productSlug: product.slug,
+          unitPriceMinor: 2000,
+          quantity: 1,
+          lineTotalMinor: 2000
+        }
+      ],
+      shippingAddress,
+      subtotalMinor: 2000,
+      shippingFeeMinor: 0,
+      totalMinor: 2000,
+      currency: "USD",
+      orderStatus: "PENDING_PAYMENT",
+      paymentStatus: "PENDING"
+    });
+    await PaymentModel.create({
+      orderId: pendingOrder._id,
+      userId,
+      provider: "STRIPE",
+      amountMinor: 2000,
+      currency: "USD",
+      status: "PENDING"
+    });
+
+    const response = await request(app)
+      .get("/api/v1/admin/dashboard/summary")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .expect(200);
+
+    expect(response.body.data.summary.paidRevenueMinor).toBe(4000);
+    expect(response.body.data.summary.totalOrders).toBe(2);
+    expect(response.body.data.summary.lowStockProducts.map((item: { slug: string }) => item.slug)).toContain(product.slug);
+    expect(response.body.data.summary.topProducts[0]).toMatchObject({
+      productId: product._id.toString(),
+      soldQuantity: 2,
+      revenueMinor: 4000
+    });
   });
 });

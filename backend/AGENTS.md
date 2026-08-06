@@ -1,0 +1,16 @@
+Backend AGENTS.md
+- Follow the root AGENTS.md.
+- This directory contains the backend API.
+- Use existing controller/service/repository patterns.
+- Do not change API contracts, database schema, migrations, or environment config unless required.
+- Run backend tests before final response when possible.
+- This project is a modular monolith.
+- Do not introduce microservices.
+- Do not add dependencies without justification.
+- Do not put business logic in controllers.
+- Do not trust prices or totals from the client.
+- Payment webhook processing must be idempotent.
+- Critical order operations must be tested.
+- Modify only files relevant to the current task.
+- Do not refactor unrelated modules.
+- Every task must include acceptance criteria.

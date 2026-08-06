@@ -1,6 +1,9 @@
 import mongoose, { Types } from "mongoose";
 import type Stripe from "stripe";
 import { AppError } from "../../common/errors/AppError.js";
+import { logger, type LogFields } from "../../common/logger.js";
+import { getConfig } from "../../config/env.js";
+import { ProductModel } from "../catalog/product.model.js";
 import { OrderModel, type Order } from "../orders/order.model.js";
 import { PaymentModel, type Payment } from "./payment.model.js";
 import { PaymentWebhookEventModel } from "./paymentWebhookEvent.model.js";
@@ -9,6 +12,11 @@ import { constructStripeWebhookEvent } from "./stripe.client.js";
 type WebhookOutcome = "PROCESSED" | "IGNORED" | "FAILED";
 type LocalPayment = Payment & { _id: Types.ObjectId };
 type LocalOrder = Order & { _id: Types.ObjectId };
+type OrderItem = LocalOrder["items"][number];
+interface StockRequest {
+  productId: Types.ObjectId;
+  quantity: number;
+}
 interface FailureDetails {
   orderId: string | undefined;
   paymentId: string | undefined;
@@ -72,18 +80,83 @@ const markPaymentReview = async (
   orderId: Types.ObjectId,
   paymentId: Types.ObjectId,
   message: string,
+  paidAt: Date | undefined,
+  providerCheckoutSessionId: string | undefined,
+  providerPaymentId: string | undefined,
   dbSession: mongoose.ClientSession
 ): Promise<void> => {
   await PaymentModel.updateOne(
-    { _id: paymentId, status: { $ne: "SUCCEEDED" } },
-    { $set: { status: "FAILED", failureCode: "PAYMENT_VERIFICATION_FAILED", failureMessage: message } },
+    { _id: paymentId },
+    {
+      $set: {
+        status: "SUCCEEDED",
+        providerCheckoutSessionId,
+        providerPaymentId,
+        paidAt,
+        failureCode: "PAYMENT_REVIEW_REQUIRED",
+        failureMessage: message
+      }
+    },
     { runValidators: true, session: dbSession }
   ).exec();
   await OrderModel.updateOne(
-    { _id: orderId, paymentStatus: { $ne: "SUCCEEDED" } },
-    { $set: { orderStatus: "PAYMENT_REVIEW", paymentStatus: "FAILED" } },
+    { _id: orderId },
+    { $set: { orderStatus: "PAYMENT_REVIEW", paymentStatus: "SUCCEEDED", paidAt } },
     { runValidators: true, session: dbSession }
   ).exec();
+};
+
+const stockRequests = (items: OrderItem[]): StockRequest[] => {
+  const requestsByProductId = new Map<string, StockRequest>();
+
+  for (const item of items) {
+    const productId = item.productId.toString();
+    const existing = requestsByProductId.get(productId);
+    if (existing) {
+      existing.quantity += item.quantity;
+    } else {
+      requestsByProductId.set(productId, { productId: item.productId, quantity: item.quantity });
+    }
+  }
+
+  return [...requestsByProductId.values()].sort((first, second) => first.productId.toString().localeCompare(second.productId.toString()));
+};
+
+const stockReviewMessage = async (items: OrderItem[], dbSession: mongoose.ClientSession): Promise<string | null> => {
+  const requests = stockRequests(items);
+  const products = await ProductModel.find({ _id: { $in: requests.map((item) => item.productId) } })
+    .select("_id stockQuantity status")
+    .session(dbSession)
+    .lean<Array<{ _id: Types.ObjectId; stockQuantity: number; status: string }>>()
+    .exec();
+  const productsById = new Map(products.map((product) => [product._id.toString(), product]));
+
+  for (const item of requests) {
+    const product = productsById.get(item.productId.toString());
+    if (!product || product.status !== "ACTIVE" || product.stockQuantity < item.quantity) {
+      return "Payment succeeded but stock could not be fulfilled";
+    }
+  }
+
+  return null;
+};
+
+const decrementStock = async (items: OrderItem[], dbSession: mongoose.ClientSession): Promise<void> => {
+  for (const item of stockRequests(items)) {
+    const result = await ProductModel.updateOne(
+      {
+        _id: item.productId,
+        status: "ACTIVE",
+        stockQuantity: { $gte: item.quantity }
+      },
+      { $inc: { stockQuantity: -item.quantity } },
+      { runValidators: true, session: dbSession }
+    ).exec();
+
+    if (result.modifiedCount !== 1) {
+      throw new AppError(409, "PAYMENT_STOCK_UNAVAILABLE", "Payment succeeded but stock could not be fulfilled");
+    }
+  }
 };
 
 const trustedAmountError = (
@@ -118,16 +191,17 @@ const trustedAmountError = (
 };
 
 const markSuccess = async (event: Stripe.Event, dbSession: mongoose.ClientSession): Promise<WebhookOutcome> => {
+  const config = getConfig();
   const details = checkoutSessionDetails(event.data.object as Stripe.Checkout.Session);
   const ids = parseTrustedIds(details.orderId, details.paymentId);
-  const [payment, order] = await Promise.all([
-    PaymentModel.findOne({ _id: ids.paymentId, orderId: ids.orderId }).session(dbSession).exec(),
-    OrderModel.findById(ids.orderId).session(dbSession).exec()
-  ]);
+  const payment = await PaymentModel.findOne({ _id: ids.paymentId, orderId: ids.orderId }).session(dbSession).exec();
+  const order = await OrderModel.findById(ids.orderId).session(dbSession).exec();
 
   if (!payment || !order) {
     throw new AppError(404, "PAYMENT_NOT_FOUND", "Payment not found");
   }
+
+  const paidAt = payment.paidAt ?? order.paidAt ?? new Date();
 
   const verificationError = trustedAmountError(
     payment,
@@ -138,11 +212,54 @@ const markSuccess = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
     details.providerPaymentId
   );
   if (verificationError) {
-    await markPaymentReview(ids.orderId, ids.paymentId, verificationError, dbSession);
-    return "FAILED";
+    await markPaymentReview(
+      ids.orderId,
+      ids.paymentId,
+      verificationError,
+      paidAt,
+      details.providerCheckoutSessionId,
+      details.providerPaymentId,
+      dbSession
+    );
+    logger.warn(config, "Payment moved to review", {
+      orderId: ids.orderId.toString(),
+      paymentId: ids.paymentId.toString(),
+      providerEventId: event.id,
+      errorCode: "PAYMENT_REVIEW_REQUIRED"
+    });
+    return "PROCESSED";
   }
 
-  const paidAt = payment.paidAt ?? order.paidAt ?? new Date();
+  if (payment.status === "SUCCEEDED" && order.paymentStatus === "SUCCEEDED") {
+    logger.info(config, "Stripe success webhook already finalized", {
+      orderId: ids.orderId.toString(),
+      paymentId: ids.paymentId.toString(),
+      providerEventId: event.id
+    });
+    return "PROCESSED";
+  }
+
+  const reviewMessage = await stockReviewMessage(order.items, dbSession);
+  if (reviewMessage) {
+    await markPaymentReview(
+      ids.orderId,
+      ids.paymentId,
+      reviewMessage,
+      paidAt,
+      details.providerCheckoutSessionId,
+      details.providerPaymentId,
+      dbSession
+    );
+    logger.warn(config, "Payment moved to review", {
+      orderId: ids.orderId.toString(),
+      paymentId: ids.paymentId.toString(),
+      providerEventId: event.id,
+      errorCode: "PAYMENT_REVIEW_REQUIRED"
+    });
+    return "PROCESSED";
+  }
+
+  await decrementStock(order.items, dbSession);
 
   await PaymentModel.updateOne(
     { _id: ids.paymentId, status: { $ne: "SUCCEEDED" } },
@@ -173,10 +290,17 @@ const markSuccess = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
     { runValidators: true, session: dbSession }
   ).exec();
 
+  logger.info(config, "Stripe success webhook finalized payment", {
+    orderId: ids.orderId.toString(),
+    paymentId: ids.paymentId.toString(),
+    providerEventId: event.id
+  });
+
   return "PROCESSED";
 };
 
 const markFailure = async (event: Stripe.Event, dbSession: mongoose.ClientSession): Promise<WebhookOutcome> => {
+  const config = getConfig();
   const details: FailureDetails =
     event.type === "payment_intent.payment_failed"
       ? paymentIntentDetails(event.data.object as Stripe.PaymentIntent)
@@ -193,6 +317,11 @@ const markFailure = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
   }
 
   if (payment.status === "SUCCEEDED") {
+    logger.info(config, "Stripe failure webhook ignored for succeeded payment", {
+      orderId: ids.orderId.toString(),
+      paymentId: ids.paymentId.toString(),
+      providerEventId: event.id
+    });
     return "PROCESSED";
   }
 
@@ -215,6 +344,13 @@ const markFailure = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
     { runValidators: true, session: dbSession }
   ).exec();
 
+  logger.warn(config, "Stripe failure webhook marked payment failed", {
+    orderId: ids.orderId.toString(),
+    paymentId: ids.paymentId.toString(),
+    providerEventId: event.id,
+    errorCode: details.failureCode ?? "PAYMENT_FAILED"
+  });
+
   return "PROCESSED";
 };
 
@@ -231,7 +367,9 @@ const processEvent = async (event: Stripe.Event, dbSession: mongoose.ClientSessi
   return markFailure(event, dbSession);
 };
 
-export const handleStripeWebhook = async (rawBody: Buffer, signature: string | undefined): Promise<void> => {
+export const handleStripeWebhook = async (rawBody: Buffer, signature: string | undefined, logContext: LogFields = {}): Promise<void> => {
+  const config = getConfig();
+
   if (!signature) {
     throw new AppError(400, "STRIPE_SIGNATURE_MISSING", "Stripe signature is missing");
   }
@@ -246,6 +384,8 @@ export const handleStripeWebhook = async (rawBody: Buffer, signature: string | u
 
     throw new AppError(400, "STRIPE_SIGNATURE_INVALID", "Stripe signature is invalid");
   }
+
+  logger.info(config, "Stripe webhook received", { ...logContext, providerEventId: event.id, eventType: event.type });
 
   try {
     await PaymentWebhookEventModel.create({
@@ -262,6 +402,7 @@ export const handleStripeWebhook = async (rawBody: Buffer, signature: string | u
 
     const existingEvent = await PaymentWebhookEventModel.findOne({ providerEventId: event.id }).select("processingStatus").lean().exec();
     if (existingEvent?.processingStatus === "PROCESSED" || existingEvent?.processingStatus === "IGNORED") {
+      logger.info(config, "Duplicate Stripe webhook ignored", { ...logContext, providerEventId: event.id, eventType: event.type });
       return;
     }
 
@@ -294,6 +435,7 @@ export const handleStripeWebhook = async (rawBody: Buffer, signature: string | u
         },
         { runValidators: true, session: dbSession }
       ).exec();
+      logger.info(config, "Stripe webhook processed", { ...logContext, providerEventId: event.id, eventType: event.type, outcome });
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Stripe webhook processing failed";
@@ -303,6 +445,7 @@ export const handleStripeWebhook = async (rawBody: Buffer, signature: string | u
       { runValidators: true }
     ).exec();
 
+    logger.error(config, "Stripe webhook failed", { ...logContext, providerEventId: event.id, eventType: event.type, error: message });
     throw error;
   } finally {
     await dbSession.endSession();

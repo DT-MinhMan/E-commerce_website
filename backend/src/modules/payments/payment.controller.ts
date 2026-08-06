@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../../common/errors/AppError.js";
 import { successResponse } from "../../common/utils/apiResponse.js";
+import { getConfig } from "../../config/env.js";
 import { createCheckoutSession, getPaymentStatusByOrder } from "./payment.service.js";
 import { parseCheckoutSessionInput, parseOrderIdParam } from "./payment.validation.js";
 
@@ -15,7 +16,10 @@ const currentUserId = (req: Request): string => {
 export const createCheckoutSessionController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const input = parseCheckoutSessionInput(req.body);
-    res.status(200).json(successResponse(await createCheckoutSession(currentUserId(req), input.orderId)));
+    const userId = currentUserId(req);
+    res.status(200).json(
+      successResponse(await createCheckoutSession(userId, input.orderId, getConfig(), { requestId: req.requestId, userId, orderId: input.orderId }))
+    );
   } catch (error) {
     next(error);
   }

@@ -1,17 +1,14 @@
 import mongoose from "mongoose";
+import { logger } from "../common/logger.js";
+import { getConfig, type AppConfig } from "./env.js";
 
-export const connectDatabase = async (mongodbUri: string): Promise<void> => {
+export const connectDatabase = async (mongodbUri: string, config: Pick<AppConfig, "logLevel"> = getConfig()): Promise<void> => {
   try {
     await mongoose.connect(mongodbUri);
-    console.info(
-      JSON.stringify({
-        level: "info",
-        message: "MongoDB connected"
-      })
-    );
+    logger.info(config, "MongoDB connected");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown MongoDB connection error";
-    console.error(JSON.stringify({ level: "error", message: "MongoDB connection failed", error: message }));
+    logger.error(config, "MongoDB connection failed", { error: message });
     throw error;
   }
 };

@@ -6,13 +6,16 @@ import {
   createProductController,
   deactivateCategoryController,
   deactivateProductController,
+  getAdminProductController,
   getPublicProductController,
   listAdminCategoriesController,
   listAdminProductsController,
   listPublicCategoriesController,
   listPublicProductsController,
   updateCategoryController,
-  updateProductController
+  updateProductController,
+  updateProductStatusController,
+  updateProductStockController
 } from "./catalog.controller.js";
 
 export const publicCategoryRoutes = Router();
@@ -34,5 +37,8 @@ adminCategoryRoutes.delete("/:id", deactivateCategoryController);
 adminProductRoutes.use(authenticate, requireRoles("ADMIN"));
 adminProductRoutes.get("/", listAdminProductsController);
 adminProductRoutes.post("/", createProductController);
+adminProductRoutes.get("/:id", getAdminProductController);
+adminProductRoutes.patch("/:id/stock", updateProductStockController);
+adminProductRoutes.patch("/:id/status", updateProductStatusController);
 adminProductRoutes.patch("/:id", updateProductController);
 adminProductRoutes.delete("/:id", deactivateProductController);

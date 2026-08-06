@@ -1,4 +1,4 @@
-import type { CategoryStatus, ProductStatus } from "../../database/enums.js";
+import type { CategoryStatus, ProductStatus, RoomType } from "../../database/enums.js";
 
 export interface CategoryInput {
   name: string;
@@ -17,6 +17,7 @@ export interface CategoryUpdateInput {
 export interface ProductImageInput {
   url: string;
   alt?: string;
+  publicId?: string;
 }
 
 export interface ProductInput {
@@ -24,6 +25,7 @@ export interface ProductInput {
   slug?: string;
   description: string;
   categoryId: string;
+  roomType?: RoomType;
   priceMinor: number;
   currency?: string;
   stockQuantity: number;
@@ -36,11 +38,20 @@ export interface ProductUpdateInput {
   slug?: string;
   description?: string;
   categoryId?: string;
+  roomType?: RoomType;
   priceMinor?: number;
   currency?: string;
   stockQuantity?: number;
   images?: ProductImageInput[];
   status?: ProductStatus;
+}
+
+export interface ProductStockUpdateInput {
+  stockQuantity: number;
+}
+
+export interface ProductStatusUpdateInput {
+  status: ProductStatus;
 }
 
 export interface PaginationQuery {
@@ -50,11 +61,13 @@ export interface PaginationQuery {
 
 export interface ProductListQuery extends PaginationQuery {
   category?: string;
+  roomType?: RoomType;
   minPriceMinor?: number;
   maxPriceMinor?: number;
   sort: "newest" | "price_asc" | "price_desc";
   q?: string;
   status?: ProductStatus;
+  stockState?: "in_stock" | "low_stock" | "out_of_stock";
 }
 
 export interface CategoryListQuery {

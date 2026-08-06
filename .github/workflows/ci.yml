@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    name: Lint, Test, Build
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_BASE_URL: http://localhost:5000/api/v1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Start MongoDB replica set
+        run: |
+          docker run -d --name mongodb -p 27017:27017 mongo:7 mongod --replSet rs0 --bind_ip_all
+          for i in {1..30}; do
+            if docker exec mongodb mongosh --quiet --eval "try { rs.status().ok } catch (error) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}).ok }"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs mongodb
+          exit 1
+
+      - name: Backend tests
+        run: pnpm --filter @mern-ecommerce/backend test
+
+      - name: Frontend tests
+        run: pnpm --filter @mern-ecommerce/frontend test
+
+      - name: Backend integration tests
+        run: pnpm test:integration
+
+      - name: Build
+        run: pnpm build
+
+      - name: Backend Docker build smoke
+        run: docker build -f backend/Dockerfile -t mern-ecommerce-backend:ci .

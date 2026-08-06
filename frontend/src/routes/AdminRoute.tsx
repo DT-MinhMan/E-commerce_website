@@ -1,6 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
-import { Loading } from "../components/Loading.js";
-import { useAuthStore } from "../store/authStore.js";
+﻿import { Navigate, Outlet } from "react-router-dom";
+import { Loading } from "../components/feedback/Loading.js";
+import { useAuthStore } from "../features/auth/store/authStore.js";
 
 export const AdminRoute = () => {
   const user = useAuthStore((state) => state.user);

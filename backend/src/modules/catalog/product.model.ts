@@ -1,10 +1,11 @@
 import { Schema, model, type HydratedDocument, type Types } from "mongoose";
-import { DEFAULT_CURRENCY, PRODUCT_STATUSES, type ProductStatus } from "../../database/enums.js";
+import { DEFAULT_CURRENCY, PRODUCT_STATUSES, ROOM_TYPES, type ProductStatus, type RoomType } from "../../database/enums.js";
 import { isCurrencyCode, isNonNegativeInteger, isSlug } from "../../database/validators.js";
 
 export interface ProductImage {
   url: string;
   alt?: string;
+  publicId?: string;
 }
 
 export interface Product {
@@ -12,6 +13,7 @@ export interface Product {
   slug: string;
   description: string;
   categoryId: Types.ObjectId;
+  roomType?: RoomType;
   priceMinor: number;
   currency: string;
   stockQuantity: number;
@@ -35,6 +37,11 @@ const productImageSchema = new Schema<ProductImage>(
       type: String,
       trim: true,
       maxlength: 160
+    },
+    publicId: {
+      type: String,
+      trim: true,
+      maxlength: 255
     }
   },
   { _id: false }
@@ -100,6 +107,11 @@ const productSchema = new Schema<Product>(
       enum: PRODUCT_STATUSES,
       required: true,
       default: "ACTIVE"
+    },
+    roomType: {
+      type: String,
+      enum: ROOM_TYPES,
+      required: false
     }
   },
   {
@@ -110,6 +122,9 @@ const productSchema = new Schema<Product>(
 
 productSchema.index({ slug: 1 }, { unique: true });
 productSchema.index({ categoryId: 1, status: 1 });
+productSchema.index({ roomType: 1, status: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
+productSchema.index({ stockQuantity: 1, updatedAt: -1 });
+productSchema.index({ name: "text", description: "text" });
 
 export const ProductModel = model<Product>("Product", productSchema);

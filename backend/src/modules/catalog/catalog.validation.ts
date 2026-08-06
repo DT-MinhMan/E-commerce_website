@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { AppError } from "../../common/errors/AppError.js";
-import { CATEGORY_STATUSES, PRODUCT_STATUSES, type ProductStatus } from "../../database/enums.js";
+import { CATEGORY_STATUSES, PRODUCT_STATUSES, ROOM_TYPES, type ProductStatus, type RoomType } from "../../database/enums.js";
 import { isCurrencyCode, isNonNegativeInteger, isSlug } from "../../database/validators.js";
 import type {
   CategoryInput,
@@ -9,12 +9,15 @@ import type {
   ProductImageInput,
   ProductInput,
   ProductListQuery,
+  ProductStatusUpdateInput,
+  ProductStockUpdateInput,
   ProductUpdateInput
 } from "./catalog.types.js";
 
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 12;
 const PRODUCT_SORTS = ["newest", "price_asc", "price_desc"] as const;
+const PRODUCT_STOCK_STATES = ["in_stock", "low_stock", "out_of_stock"] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -177,13 +180,15 @@ const parseImages = (body: Record<string, unknown>): ProductImageInput[] | undef
       throw new AppError(400, "VALIDATION_ERROR", `images.${index} must be an object`);
     }
 
-    assertKnownFields(image, ["url", "alt"]);
+    assertKnownFields(image, ["url", "alt", "publicId"]);
     const url = requiredString(image, "url");
     const alt = optionalString(image, "alt");
+    const publicId = optionalString(image, "publicId");
     assertHttpUrl(url, `images.${index}.url`);
     assertOptionalStringLength(alt, `images.${index}.alt`, 160);
+    assertOptionalStringLength(publicId, `images.${index}.publicId`, 255);
 
-    return alt === undefined ? { url } : { url, alt };
+    return { url, ...(alt === undefined ? {} : { alt }), ...(publicId === undefined ? {} : { publicId }) };
   });
 };
 
@@ -325,6 +330,7 @@ export const parseProductCreateInput = (body: unknown): ProductInput => {
     "slug",
     "description",
     "categoryId",
+    "roomType",
     "priceMinor",
     "currency",
     "stockQuantity",
@@ -334,6 +340,7 @@ export const parseProductCreateInput = (body: unknown): ProductInput => {
   const name = requiredString(parsed, "name");
   const description = requiredString(parsed, "description");
   const categoryId = parseObjectIdString(parsed, "categoryId");
+  const roomType = parseStatus<RoomType>(parsed, "roomType", ROOM_TYPES);
   const priceMinor = requiredInteger(parsed, "priceMinor");
   const stockQuantity = requiredInteger(parsed, "stockQuantity");
   const currency = parseCurrency(parsed);
@@ -344,7 +351,7 @@ export const parseProductCreateInput = (body: unknown): ProductInput => {
   assertStringLength(name, "name", 2, 180);
   assertStringLength(description, "description", 10, 3000);
 
-  return { name, slug, description, categoryId, priceMinor, currency, stockQuantity, images, status };
+  return { name, slug, description, categoryId, roomType, priceMinor, currency, stockQuantity, images, status };
 };
 
 export const parseProductUpdateInput = (body: unknown): ProductUpdateInput => {
@@ -353,6 +360,7 @@ export const parseProductUpdateInput = (body: unknown): ProductUpdateInput => {
     "slug",
     "description",
     "categoryId",
+    "roomType",
     "priceMinor",
     "currency",
     "stockQuantity",
@@ -364,6 +372,7 @@ export const parseProductUpdateInput = (body: unknown): ProductUpdateInput => {
   const slug = parseSlug(parsed, "slug");
   const description = optionalString(parsed, "description");
   const categoryId = parseOptionalObjectIdString(parsed, "categoryId");
+  const roomType = parseStatus<RoomType>(parsed, "roomType", ROOM_TYPES);
   const priceMinor = optionalInteger(parsed, "priceMinor");
   const currency = parseCurrency(parsed);
   const stockQuantity = optionalInteger(parsed, "stockQuantity");
@@ -386,6 +395,10 @@ export const parseProductUpdateInput = (body: unknown): ProductUpdateInput => {
 
   if (categoryId !== undefined) {
     input.categoryId = categoryId;
+  }
+
+  if (roomType !== undefined) {
+    input.roomType = roomType;
   }
 
   if (priceMinor !== undefined) {
@@ -412,6 +425,22 @@ export const parseProductUpdateInput = (body: unknown): ProductUpdateInput => {
   return input;
 };
 
+export const parseProductStockUpdateInput = (body: unknown): ProductStockUpdateInput => {
+  const parsed = parseBody(body, ["stockQuantity"]);
+  return { stockQuantity: requiredInteger(parsed, "stockQuantity") };
+};
+
+export const parseProductStatusUpdateInput = (body: unknown): ProductStatusUpdateInput => {
+  const parsed = parseBody(body, ["status"]);
+  const status = parseStatus<ProductStatus>(parsed, "status", PRODUCT_STATUSES);
+
+  if (status === undefined) {
+    throw new AppError(400, "VALIDATION_ERROR", "status is required");
+  }
+
+  return { status };
+};
+
 export const parseProductListQuery = (query: unknown, includeStatus = false): ProductListQuery => {
   const parsed = isRecord(query) ? query : {};
   const page = parseQueryInteger(parsed, "page", 1);
@@ -420,8 +449,10 @@ export const parseProductListQuery = (query: unknown, includeStatus = false): Pr
   const maxPriceMinor = parseQueryInteger(parsed, "maxPriceMinor");
   const sort = queryString(parsed, "sort") ?? "newest";
   const category = queryString(parsed, "category");
+  const roomType = parseStatus<RoomType>(parsed, "roomType", ROOM_TYPES);
   const q = queryString(parsed, "q");
   const status = includeStatus ? parseStatus<ProductStatus>(parsed, "status", PRODUCT_STATUSES) : undefined;
+  const stockState = queryString(parsed, "stockState");
 
   if (page === undefined || page < 1) {
     throw new AppError(400, "VALIDATION_ERROR", "page must be at least 1");
@@ -443,6 +474,10 @@ export const parseProductListQuery = (query: unknown, includeStatus = false): Pr
     throw new AppError(400, "VALIDATION_ERROR", "minPriceMinor cannot be greater than maxPriceMinor");
   }
 
+  if (stockState !== undefined && !PRODUCT_STOCK_STATES.includes(stockState as (typeof PRODUCT_STOCK_STATES)[number])) {
+    throw new AppError(400, "VALIDATION_ERROR", "stockState must be one of: in_stock, low_stock, out_of_stock");
+  }
+
   return {
     page,
     limit,
@@ -450,7 +485,9 @@ export const parseProductListQuery = (query: unknown, includeStatus = false): Pr
     maxPriceMinor,
     sort: sort as ProductListQuery["sort"],
     category: category === undefined ? undefined : normalizeSlug(category),
+    roomType,
     q,
-    status
+    status,
+    stockState: stockState as ProductListQuery["stockState"] | undefined
   };
 };

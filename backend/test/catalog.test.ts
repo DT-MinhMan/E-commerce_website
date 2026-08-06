@@ -118,6 +118,36 @@ describe("catalog API", () => {
     expect(await CategoryModel.findById(created.body.data.category.id).exec()).toBeTruthy();
   });
 
+  it("blocks category deactivation while active products still use it", async () => {
+    const category = await createCategory("occupied-category");
+    await createProduct("active-category-product", category._id);
+
+    const patchResponse = await request(app)
+      .patch(`/api/v1/admin/categories/${category._id.toString()}`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ status: "INACTIVE" })
+      .expect(409);
+    expect(patchResponse.body.error.code).toBe("CATEGORY_HAS_ACTIVE_PRODUCTS");
+
+    const deleteResponse = await request(app)
+      .delete(`/api/v1/admin/categories/${category._id.toString()}`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .expect(409);
+    expect(deleteResponse.body.error.code).toBe("CATEGORY_HAS_ACTIVE_PRODUCTS");
+  });
+
+  it("allows category deactivation when it has no active products", async () => {
+    const category = await createCategory("inactive-product-category");
+    await createProduct("inactive-category-product", category._id, { status: "INACTIVE" });
+
+    const deactivated = await request(app)
+      .patch(`/api/v1/admin/categories/${category._id.toString()}`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ status: "INACTIVE" })
+      .expect(200);
+    expect(deactivated.body.data.category.status).toBe("INACTIVE");
+  });
+
   it("lists public products with active visibility, pagination, filters, escaped search and sort", async () => {
     const keyboards = await createCategory("keyboards");
     const mice = await createCategory("mice");
@@ -255,5 +285,59 @@ describe("catalog API", () => {
       .set("Authorization", `Bearer ${adminToken()}`)
       .expect(200);
     expect(inactive.body.data.products.map((product: { slug: string }) => product.slug)).toEqual(["inactive-product"]);
+  });
+
+  it("supports admin product detail, stock updates, status updates and stock filters", async () => {
+    const category = await createCategory("keyboards");
+    const inactiveCategory = await createCategory("legacy", "INACTIVE");
+    const product = await createProduct("stocked-product", category._id, { stockQuantity: 8 });
+    await createProduct("low-stock-product", category._id, { stockQuantity: 3 });
+    await createProduct("out-product", category._id, { stockQuantity: 0 });
+
+    const detail = await request(app)
+      .get(`/api/v1/admin/products/${product._id.toString()}`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .expect(200);
+    expect(detail.body.data.product.slug).toBe("stocked-product");
+
+    const invalidStock = await request(app)
+      .patch(`/api/v1/admin/products/${product._id.toString()}/stock`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ stockQuantity: 1.5 })
+      .expect(400);
+    expect(invalidStock.body.error.code).toBe("VALIDATION_ERROR");
+
+    const unknownStockField = await request(app)
+      .patch(`/api/v1/admin/products/${product._id.toString()}/stock`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ stockQuantity: 4, $inc: { stockQuantity: 99 } })
+      .expect(400);
+    expect(unknownStockField.body.error.code).toBe("VALIDATION_ERROR");
+
+    const updatedStock = await request(app)
+      .patch(`/api/v1/admin/products/${product._id.toString()}/stock`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ stockQuantity: 4 })
+      .expect(200);
+    expect(updatedStock.body.data.product.stockQuantity).toBe(4);
+
+    const lowStock = await request(app)
+      .get("/api/v1/admin/products?stockState=low_stock&limit=50")
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .expect(200);
+    expect(lowStock.body.data.products.map((item: { slug: string }) => item.slug)).toEqual(
+      expect.arrayContaining(["stocked-product", "low-stock-product"])
+    );
+
+    await ProductModel.findByIdAndUpdate(product._id, {
+      $set: { status: "INACTIVE", categoryId: inactiveCategory._id }
+    }).exec();
+
+    const rejectedActivation = await request(app)
+      .patch(`/api/v1/admin/products/${product._id.toString()}/status`)
+      .set("Authorization", `Bearer ${adminToken()}`)
+      .send({ status: "ACTIVE" })
+      .expect(400);
+    expect(rejectedActivation.body.error.code).toBe("PRODUCT_CATEGORY_INVALID");
   });
 });

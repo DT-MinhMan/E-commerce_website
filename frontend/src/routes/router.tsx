@@ -1,22 +1,21 @@
 import { createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "../layouts/AppLayout.js";
-import { AccountPage } from "../pages/AccountPage.js";
-import { AdminPage } from "../pages/AdminPage.js";
-import { CartPage } from "../pages/CartPage.js";
+import { AccountPage } from "../pages/account/AccountPage.js";
+import { LoginPage } from "../pages/account/LoginPage.js";
+import { OrderDetailPage } from "../pages/account/OrderDetailPage.js";
+import { OrderHistoryPage } from "../pages/account/OrderHistoryPage.js";
+import { PayOrderPage } from "../pages/account/PayOrderPage.js";
+import { PaymentCancelPage } from "../pages/account/PaymentCancelPage.js";
+import { PaymentSuccessPage } from "../pages/account/PaymentSuccessPage.js";
+import { RegisterPage } from "../pages/account/RegisterPage.js";
 import { ErrorPage } from "../pages/ErrorPage.js";
-import { HealthPage } from "../pages/HealthPage.js";
-import { HomePage } from "../pages/HomePage.js";
-import { LoginPage } from "../pages/LoginPage.js";
 import { NotFoundPage } from "../pages/NotFoundPage.js";
-import { CheckoutPage } from "../pages/CheckoutPage.js";
-import { OrderDetailPage } from "../pages/OrderDetailPage.js";
-import { OrderHistoryPage } from "../pages/OrderHistoryPage.js";
-import { PayOrderPage } from "../pages/PayOrderPage.js";
-import { PaymentCancelPage } from "../pages/PaymentCancelPage.js";
-import { PaymentSuccessPage } from "../pages/PaymentSuccessPage.js";
-import { ProductDetailPage } from "../pages/ProductDetailPage.js";
-import { ProductListPage } from "../pages/ProductListPage.js";
-import { RegisterPage } from "../pages/RegisterPage.js";
+import { CartPage } from "../pages/storefront/CartPage.js";
+import { CheckoutPage } from "../pages/storefront/CheckoutPage.js";
+import { HealthPage } from "../pages/storefront/HealthPage.js";
+import { HomePage } from "../pages/storefront/HomePage.js";
+import { ProductDetailPage } from "../pages/storefront/ProductDetailPage.js";
+import { ProductListPage } from "../pages/storefront/ProductListPage.js";
 import { AdminRoute } from "./AdminRoute.js";
 import { ProtectedRoute } from "./ProtectedRoute.js";
 
@@ -92,7 +91,39 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "admin",
-            element: <AdminPage />
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminPage.js")).AdminPage })
+          },
+          {
+            path: "admin/categories",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminCategoriesPage.js")).AdminCategoriesPage })
+          },
+          {
+            path: "admin/categories/new",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminCategoryFormPage.js")).AdminCategoryFormPage })
+          },
+          {
+            path: "admin/categories/:categoryId/edit",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminCategoryFormPage.js")).AdminCategoryFormPage })
+          },
+          {
+            path: "admin/products",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminProductsPage.js")).AdminProductsPage })
+          },
+          {
+            path: "admin/products/new",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminProductFormPage.js")).AdminProductFormPage })
+          },
+          {
+            path: "admin/products/:productId/edit",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminProductFormPage.js")).AdminProductFormPage })
+          },
+          {
+            path: "admin/orders",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminOrdersPage.js")).AdminOrdersPage })
+          },
+          {
+            path: "admin/orders/:orderId",
+            lazy: async () => ({ Component: (await import("../pages/admin/AdminOrderDetailPage.js")).AdminOrderDetailPage })
           }
         ]
       },
