@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useLogout } from "../../features/auth/hooks/useAuthQueries.js";
 import { useAuthStore } from "../../features/auth/store/authStore.js";
 import { useCartQuery } from "../../features/cart/hooks/useCartQueries.js";
@@ -95,6 +95,21 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
     }
   };
 
+  const searchParams = new URLSearchParams(location.search);
+  const roomTypeParam = searchParams.get("roomType");
+  const sortParam = searchParams.get("sort");
+  const viewParam = searchParams.get("view");
+
+  const isHomeActive = location.pathname === "/";
+  const isRoomActive = location.pathname.startsWith("/products") && Boolean(roomTypeParam);
+  const isCollectionActive = location.pathname.startsWith("/products") && sortParam === "newest" && !roomTypeParam;
+  const isInspirationActive = location.pathname.startsWith("/inspiration") || location.pathname.startsWith("/goc-cam-hung") || (location.pathname.startsWith("/products") && viewParam === "inspiration");
+  const isProductsActive =
+    location.pathname.startsWith("/products") &&
+    !roomTypeParam &&
+    sortParam !== "newest" &&
+    viewParam !== "inspiration";
+
   return (
     <header className="app-header nhaxinh-header">
       <div className="header-bar nhaxinh-header-bar">
@@ -118,7 +133,7 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
 
         {/* 2. Menu Điều Hướng Desktop */}
         <nav className="nav-links desktop-nav nhaxinh-nav" aria-label="Primary navigation">
-          <NavLink to="/">TRANG CHỦ</NavLink>
+          <Link to="/" className={isHomeActive ? "active" : ""}>TRANG CHỦ</Link>
 
           {/* Menu Dropdown: SẢN PHẨM */}
           <div
@@ -126,9 +141,9 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
             onMouseEnter={() => setActiveDropdown("products")}
             onMouseLeave={() => setActiveDropdown(null)}
           >
-            <NavLink to="/products" className="dropdown-trigger">
+            <Link to="/products" className={`dropdown-trigger ${isProductsActive ? "active" : ""}`}>
               SẢN PHẨM <span className="dropdown-arrow">∨</span>
-            </NavLink>
+            </Link>
             {activeDropdown === "products" && (
               <div className="nhaxinh-dropdown-menu">
                 <Link to="/products" onClick={closeMenu}>Tất cả sản phẩm</Link>
@@ -147,9 +162,9 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
             onMouseEnter={() => setActiveDropdown("rooms")}
             onMouseLeave={() => setActiveDropdown(null)}
           >
-            <NavLink to="/products" className="dropdown-trigger">
+            <Link to="/products?roomType=LIVING_ROOM" className={`dropdown-trigger ${isRoomActive ? "active" : ""}`}>
               PHÒNG <span className="dropdown-arrow">∨</span>
-            </NavLink>
+            </Link>
             {activeDropdown === "rooms" && (
               <div className="nhaxinh-dropdown-menu">
                 <Link to="/products?roomType=LIVING_ROOM" onClick={closeMenu}>Phòng Khách</Link>
@@ -161,8 +176,8 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
             )}
           </div>
 
-          <NavLink to="/products">BỘ SƯU TẬP</NavLink>
-          <NavLink to="/products">GÓC CẢM HỨNG</NavLink>
+          <Link to="/products?sort=newest" className={isCollectionActive ? "active" : ""}>BỘ SƯU TẬP</Link>
+          <Link to="/inspiration" className={isInspirationActive ? "active" : ""}>GÓC CẢM HỨNG</Link>
         </nav>
 
         {/* 3. Thanh Tìm Kiếm, Giỏ Hàng & Đăng Nhập */}
@@ -224,12 +239,17 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
               </button>
             </div>
             <nav className="drawer-nav" aria-label="Mobile navigation">
-              <NavLink to="/" onClick={closeMenu}>TRANG CHỦ</NavLink>
-              <NavLink to="/products" onClick={closeMenu}>TẤT CẢ SẢN PHẨM</NavLink>
+              <Link to="/" className={isHomeActive ? "active" : ""} onClick={closeMenu}>TRANG CHỦ</Link>
+              <Link to="/products" className={isProductsActive && !searchParams.get("category") ? "active" : ""} onClick={closeMenu}>TẤT CẢ SẢN PHẨM</Link>
               {categories.map((category) => (
-                <NavLink to={`/products?category=${category.slug}`} key={category.id} onClick={closeMenu}>
+                <Link
+                  to={`/products?category=${category.slug}`}
+                  key={category.id}
+                  className={location.pathname.startsWith("/products") && searchParams.get("category") === category.slug ? "active" : ""}
+                  onClick={closeMenu}
+                >
                   {category.name}
-                </NavLink>
+                </Link>
               ))}
             </nav>
             <div className="drawer-account">

@@ -14,6 +14,7 @@ import { CartPage } from "../pages/storefront/CartPage.js";
 import { CheckoutPage } from "../pages/storefront/CheckoutPage.js";
 import { HealthPage } from "../pages/storefront/HealthPage.js";
 import { HomePage } from "../pages/storefront/HomePage.js";
+import { InspirationPage } from "../pages/storefront/InspirationPage.js";
 import { ProductDetailPage } from "../pages/storefront/ProductDetailPage.js";
 import { ProductListPage } from "../pages/storefront/ProductListPage.js";
 import { AdminRoute } from "./AdminRoute.js";
@@ -32,6 +33,14 @@ export const router = createBrowserRouter([
       {
         path: "health",
         element: <HealthPage />
+      },
+      {
+        path: "inspiration",
+        element: <InspirationPage />
+      },
+      {
+        path: "goc-cam-hung",
+        element: <InspirationPage />
       },
       {
         path: "products",

@@ -9,7 +9,7 @@ export const StorefrontFooter = ({ categories = [] }: StorefrontFooterProps) => 
   <footer className="storefront-footer">
     <div className="storefront-footer-inner">
       <div className="footer-brand">
-        <Link to="/" className="footer-logo-box" aria-label="ZenLiving trang chủ">
+        <Link to="/" className="footer-logo-box" aria-label="Trang chủ">
           <img src="/images/logo.png" alt="ZenLiving" className="footer-logo-img" />
         </Link>
         <p className="footer-brand-desc">

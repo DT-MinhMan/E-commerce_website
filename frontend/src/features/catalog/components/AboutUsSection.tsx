@@ -28,11 +28,8 @@ export const AboutUsSection = () => {
           <div className="aboutus-text-box">
             <h2>Về ZenLiving</h2>
             <p>
-              ZenLiving, ra đời vào năm 1999, là một trong những thương hiệu tiên phong trong ngành nội thất, với nguồn cảm hứng văn hóa Việt và gu thẩm mỹ tinh tế. Qua nhiều năm hoạt động, ZenLiving luôn chú trọng đổi mới để duy trì vị thế là thương hiệu nội thất hàng đầu tại Việt Nam.
+              ZenLiving là một trong những thương hiệu tiên phong trong ngành nội thất, với nguồn cảm hứng văn hóa Việt và gu thẩm mỹ tinh tế. ZenLiving luôn chú trọng đổi mới để duy trì vị thế là thương hiệu nội thất hàng đầu tại Việt Nam.
             </p>
-            <Link to="/products" className="aboutus-btn">
-              Xem thêm
-            </Link>
           </div>
         </div>
       </div>

@@ -43,9 +43,6 @@ export const HomeView = () => {
               Khám Phá Theo Danh Mục
             </h2>
           </div>
-          <Link className="text-link" to="/products">
-            Tất Cả Danh Mục &rarr;
-          </Link>
         </div>
 
         {categoriesQuery.isLoading && (

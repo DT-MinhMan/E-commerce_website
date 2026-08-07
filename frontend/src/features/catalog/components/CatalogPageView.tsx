@@ -5,6 +5,7 @@ import { CatalogPagination } from "./CatalogPagination.js";
 import { ProductGrid, ProductGridSkeleton } from "./ProductGrid.js";
 import { useCategoriesQuery, useProductsQuery } from "../hooks/useCatalogQueries.js";
 import { getCatalogParams } from "../utils/catalogParams.js";
+import { ROOM_TYPE_LABELS } from "../types.js";
 
 export const CatalogPageView = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -14,6 +15,29 @@ export const CatalogPageView = () => {
   const products = productsQuery.data?.products ?? [];
   const meta = productsQuery.data?.meta;
   const hasFilters = Boolean(params.category || params.roomType || params.q || params.minPriceMinor !== undefined || params.maxPriceMinor !== undefined);
+
+  const isRoomPage = Boolean(params.roomType);
+  const bannerImage = isRoomPage ? "/images/banner-phong.jpg" : "/images/banner-san-pham.jpg";
+
+  const selectedCategoryName = useMemo(() => {
+    if (!params.category || !categoriesQuery.data) return null;
+    return categoriesQuery.data.find((c) => c.slug === params.category)?.name;
+  }, [params.category, categoriesQuery.data]);
+
+  const bannerBadge = isRoomPage ? "BỘ SƯU TẬP PHÒNG" : "DANH MỤC SẢN PHẨM";
+
+  const bannerTitle = useMemo(() => {
+    if (params.q) return `Kết quả tìm kiếm: "${params.q}"`;
+    if (isRoomPage && params.roomType) {
+      return ROOM_TYPE_LABELS[params.roomType] || "Nội Thất Theo Phòng";
+    }
+    if (selectedCategoryName) return selectedCategoryName;
+    return "Tất Cả Sản Phẩm";
+  }, [params.q, isRoomPage, params.roomType, selectedCategoryName]);
+
+  const bannerDesc = isRoomPage
+    ? "Khám phá các sản phẩm nội thất tinh tế được thiết kế hài hòa cho từng không gian sống trong ngôi nhà bạn."
+    : "Khám phá bộ sưu tập nội thất ZenLiving với phong cách hiện đại, tối giản và sang trọng.";
 
   const updateFilters = (updates: Record<string, string | undefined>, resetPage = true) => {
     const next = new URLSearchParams(searchParams);
@@ -41,12 +65,20 @@ export const CatalogPageView = () => {
 
   return (
     <section className="catalog-page">
-      <div className="catalog-header">
-        <div>
-          <h2>{params.q ? "Kết quả tìm kiếm" : "Tất cả sản phẩm"}</h2>
+      {/* Banner Header cho Trang Sản Phẩm & Trang Phòng */}
+      <header className="catalog-banner-hero">
+        <img
+          src={bannerImage}
+          alt={bannerTitle}
+          className="catalog-banner-bg"
+        />
+        <div className="catalog-banner-overlay" />
+        <div className="catalog-banner-content">
+          <span className="catalog-banner-badge">{bannerBadge}</span>
+          <h1 className="catalog-banner-title">{bannerTitle}</h1>
+          <p className="catalog-banner-desc">{bannerDesc}</p>
         </div>
-        {!params.q && <p>Khám phá bộ sưu tập nội thất của chúng tôi.</p>}
-      </div>
+      </header>
 
       {/* Search result indicator */}
       {params.q && (
