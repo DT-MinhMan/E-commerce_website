@@ -1,6 +1,7 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import {
+  changePassword,
   getCurrentUser,
   loginCustomer,
   logoutCustomer,
@@ -12,7 +13,7 @@ import { orderKeys } from "../../orders/hooks/useOrderQueries.js";
 import { paymentKeys } from "../../payments/hooks/usePaymentQueries.js";
 import type { ApiError } from "../../../lib/apiClient.js";
 import { useAuthStore } from "../store/authStore.js";
-import type { AuthUser, LoginRequest, RegisterRequest } from "../types.js";
+import type { AuthUser, ChangePasswordRequest, LoginRequest, RegisterRequest } from "../types.js";
 
 export const currentUserQueryKey = ["currentUser"] as const;
 
@@ -65,11 +66,9 @@ export const useLogin = () => {
 };
 
 export const useRegister = () => {
-  const setSession = useAuthStore((state) => state.setSession);
   const clearSession = useAuthStore((state) => state.clearSession);
   const setStatus = useAuthStore((state) => state.setStatus);
   const setError = useAuthStore((state) => state.setError);
-  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: RegisterRequest) => registerCustomer(input),
@@ -77,9 +76,8 @@ export const useRegister = () => {
       setStatus("loading");
       setError(null);
     },
-    onSuccess: (session) => {
-      setSession(session);
-      queryClient.setQueryData(currentUserQueryKey, session.user);
+    onSuccess: () => {
+      setStatus("unauthenticated");
     },
     onError: (error) => {
       clearSession(getErrorMessage(error, "Unable to register"));
@@ -139,4 +137,10 @@ export const useCurrentUser = (enabled = true) => {
   }, [clearSession, query.error]);
 
   return query;
+};
+
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: (input: ChangePasswordRequest) => changePassword(input)
+  });
 };

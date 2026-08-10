@@ -54,3 +54,16 @@ export const parseLoginInput = (body: unknown): LoginInput => {
     password: requiredString(body, "password")
   };
 };
+
+export const parseChangePasswordInput = (body: unknown): { currentPassword: string; newPassword: string } => {
+  if (!isRecord(body)) {
+    throw new AppError(400, "VALIDATION_ERROR", "Request body must be an object");
+  }
+
+  const currentPassword = requiredString(body, "currentPassword");
+  const newPassword = requiredString(body, "newPassword");
+
+  assertPassword(newPassword);
+
+  return { currentPassword, newPassword };
+};

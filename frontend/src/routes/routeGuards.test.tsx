@@ -115,11 +115,12 @@ describe("route guards", () => {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/admin" element={<div>Admin page</div>} />
+          <Route path="/" element={<div>Storefront page</div>} />
           <Route path="/account" element={<div>Account page</div>} />
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByText("Account page")).toBeInTheDocument();
+    expect(screen.getByText("Storefront page")).toBeInTheDocument();
   });
 
   it("returns admins to the requested admin route after login", () => {

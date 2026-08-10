@@ -33,4 +33,34 @@ describe("apiClient", () => {
     expect(localStorage.getItem("accessToken")).toBeNull();
     expect(sessionStorage.getItem("accessToken")).toBeNull();
   });
+
+  it("deduplicates concurrent refreshSession requests into a single API call", async () => {
+    let callCount = 0;
+    const adapter: AxiosAdapter = async (config) => {
+      callCount++;
+      return {
+        data: {
+          success: true,
+          data: {
+            accessToken: "new-access-token",
+            user: { id: "1", email: "test@example.com", fullName: "Test", role: "CUSTOMER", status: "ACTIVE" }
+          },
+          meta: null
+        },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+        config
+      };
+    };
+    apiClient.defaults.adapter = adapter;
+
+    const { refreshSession } = await import("./apiClient.js");
+
+    const [res1, res2] = await Promise.all([refreshSession(), refreshSession()]);
+
+    expect(callCount).toBe(1);
+    expect(res1.accessToken).toBe("new-access-token");
+    expect(res2.accessToken).toBe("new-access-token");
+  });
 });

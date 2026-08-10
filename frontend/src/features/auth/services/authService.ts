@@ -1,5 +1,5 @@
-﻿import { apiClient, setAccessToken } from "../../../lib/apiClient.js";
-import type { AuthSession, AuthUser, LoginRequest, RegisterRequest } from "../types.js";
+import { apiClient, refreshSession, setAccessToken } from "../../../lib/apiClient.js";
+import type { AuthSession, AuthUser, ChangePasswordRequest, LoginRequest, RegisterRequest } from "../types.js";
 
 interface AuthResponse {
   success: true;
@@ -28,9 +28,9 @@ const applySession = (session: AuthSession): AuthSession => {
   return session;
 };
 
-export const registerCustomer = async (input: RegisterRequest): Promise<AuthSession> => {
-  const response = await apiClient.post<AuthResponse>("/auth/register", input);
-  return applySession(response.data.data);
+export const registerCustomer = async (input: RegisterRequest): Promise<void> => {
+  await apiClient.post<AuthResponse>("/auth/register", input);
+  setAccessToken(null);
 };
 
 export const loginCustomer = async (input: LoginRequest): Promise<AuthSession> => {
@@ -39,8 +39,7 @@ export const loginCustomer = async (input: LoginRequest): Promise<AuthSession> =
 };
 
 export const refreshAuthSession = async (): Promise<AuthSession> => {
-  const response = await apiClient.post<AuthResponse>("/auth/refresh");
-  return applySession(response.data.data);
+  return refreshSession();
 };
 
 export const logoutCustomer = async (): Promise<void> => {
@@ -51,4 +50,8 @@ export const logoutCustomer = async (): Promise<void> => {
 export const getCurrentUser = async (): Promise<AuthUser> => {
   const response = await apiClient.get<CurrentUserResponse>("/users/me");
   return response.data.data.user;
+};
+
+export const changePassword = async (input: ChangePasswordRequest): Promise<void> => {
+  await apiClient.put("/users/me/password", input);
 };

@@ -1,4 +1,4 @@
-﻿import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { config } from "../config/env.js";
 import type { AuthSession } from "../features/auth/types.js";
 
@@ -65,7 +65,7 @@ const shouldAttemptRefresh = (error: AxiosError<ErrorPayload>, request: Retriabl
   );
 };
 
-const refreshSession = async (): Promise<AuthSession> => {
+export const refreshSession = async (): Promise<AuthSession> => {
   refreshPromise ??= apiClient
     .post<AuthResponse>("/auth/refresh")
     .then((response) => {

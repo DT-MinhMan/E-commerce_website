@@ -1,9 +1,10 @@
 import { type FormEvent, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useRegister } from "../hooks/useAuthQueries.js";
 import { useAuthStore } from "../store/authStore.js";
 
 export const RegisterView = () => {
+  const navigate = useNavigate();
   const error = useAuthStore((state) => state.error);
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
@@ -36,7 +37,20 @@ export const RegisterView = () => {
       return;
     }
 
-    register.mutate({ fullName, email, password });
+    register.mutate(
+      { fullName, email, password },
+      {
+        onSuccess: () => {
+          navigate("/login", {
+            state: {
+              registered: true,
+              registeredEmail: email,
+              message: "Đăng ký tài khoản thành công! Vui lòng đăng nhập."
+            }
+          });
+        }
+      }
+    );
   };
 
   return (

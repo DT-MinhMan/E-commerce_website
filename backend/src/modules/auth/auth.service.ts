@@ -208,3 +208,25 @@ export const getUserById = async (userId: string): Promise<SafeUser> => {
 
   return toSafeUser(user);
 };
+
+export const changePassword = async (
+  userId: string,
+  input: { currentPassword: string; newPassword: string }
+): Promise<void> => {
+  const user = await UserModel.findById(userId).select("+passwordHash").exec();
+
+  if (!user) {
+    throw new AppError(401, "AUTH_ACCESS_TOKEN_INVALID", "Access token is invalid");
+  }
+
+  assertCanLogin(user);
+
+  const passwordMatches = await verifyPassword(input.currentPassword, user.passwordHash);
+
+  if (!passwordMatches) {
+    throw new AppError(400, "AUTH_INVALID_CURRENT_PASSWORD", "Current password is incorrect");
+  }
+
+  user.passwordHash = await hashPassword(input.newPassword);
+  await user.save();
+};

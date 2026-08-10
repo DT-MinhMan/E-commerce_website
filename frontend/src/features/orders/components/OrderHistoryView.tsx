@@ -1,4 +1,4 @@
-﻿import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useOrdersQuery } from "../hooks/useOrderQueries.js";
 
 const pageSize = 10;
@@ -61,7 +61,7 @@ export const OrderHistoryView = () => {
     <section className="orders-page">
       <div className="catalog-header">
         <div>
-          <p className="eyebrow">Phase 7</p>
+          <p className="eyebrow">Account</p>
           <h2>Orders</h2>
         </div>
       </div>

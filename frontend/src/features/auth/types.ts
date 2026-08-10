@@ -1,4 +1,4 @@
-﻿export type UserRole = "CUSTOMER" | "ADMIN";
+export type UserRole = "CUSTOMER" | "ADMIN";
 export type UserStatus = "ACTIVE" | "INACTIVE" | "BLOCKED";
 
 export interface AuthUser {
@@ -25,4 +25,9 @@ export interface RegisterRequest {
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }

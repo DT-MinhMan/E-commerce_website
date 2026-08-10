@@ -1,6 +1,13 @@
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env.test" });
+
 process.env.NODE_ENV = "test";
 process.env.PORT = "5000";
-process.env.MONGODB_URI = "mongodb://localhost:27017/mern_ecommerce_test?replicaSet=rs0";
+process.env.MONGODB_URI =
+  process.env.TEST_MONGODB_URI ||
+  process.env.MONGODB_URI ||
+  "mongodb://localhost:27017/mern_ecommerce_test?replicaSet=rs0";
 process.env.CLIENT_URL = "http://localhost:5173";
 process.env.LOG_LEVEL = "silent";
 process.env.JWT_ACCESS_SECRET = "test-access-secret-with-enough-length-for-phase-3";

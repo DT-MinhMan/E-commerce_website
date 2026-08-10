@@ -7,20 +7,25 @@ interface LocationState {
   from?: {
     pathname?: string;
   };
+  registered?: boolean;
+  registeredEmail?: string;
+  message?: string;
 }
 
 export const LoginView = () => {
   const location = useLocation();
+  const locationState = location.state as LocationState | null;
   const error = useAuthStore((state) => state.error);
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
   const login = useLogin();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(locationState?.registeredEmail ?? "");
   const [password, setPassword] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const successMessage = locationState?.message ?? (locationState?.registered ? "Đăng ký tài khoản thành công! Vui lòng đăng nhập." : null);
 
   if (user) {
-    const destination = (location.state as LocationState | null)?.from?.pathname ?? (user.role === "ADMIN" ? "/admin" : "/account");
+    const destination = locationState?.from?.pathname ?? (user.role === "ADMIN" ? "/admin" : "/");
     return <Navigate to={destination} replace />;
   }
 
@@ -72,6 +77,7 @@ export const LoginView = () => {
           Nhập thông tin tài khoản của bạn để tiếp tục
         </p>
         <form className="auth-form" onSubmit={submit}>
+          {successMessage && <p className="status-success">{successMessage}</p>}
           <label>
             Email
             <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="name@example.com" />
