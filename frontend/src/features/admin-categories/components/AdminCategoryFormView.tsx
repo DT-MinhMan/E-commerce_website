@@ -1,13 +1,16 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAdminCategoriesQuery, useCreateAdminCategory, useUpdateAdminCategory } from "../../admin/hooks/useAdminQueries.js";
+import { useAdminCategoriesQuery, useCreateAdminCategory, useUpdateAdminCategory, useUploadAdminCategoryImage } from "../../admin/hooks/useAdminQueries.js";
 import type { CategoryWriteInput } from "../../admin/types.js";
 
 const initialForm: CategoryWriteInput = {
   name: "",
   description: "",
+  imageUrl: "",
   status: "ACTIVE"
 };
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const AdminCategoryFormView = () => {
   const { categoryId = "" } = useParams();
@@ -16,7 +19,9 @@ export const AdminCategoryFormView = () => {
   const categoriesQuery = useAdminCategoriesQuery();
   const createCategory = useCreateAdminCategory();
   const updateCategory = useUpdateAdminCategory();
+  const uploadImage = useUploadAdminCategoryImage();
   const [form, setForm] = useState<CategoryWriteInput>(initialForm);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const category = categoriesQuery.data?.find((item) => item.id === categoryId);
@@ -25,10 +30,45 @@ export const AdminCategoryFormView = () => {
         name: category.name,
         slug: category.slug,
         description: category.description ?? "",
+        imageUrl: category.imageUrl ?? "",
         status: category.status
       });
     }
   }, [categoriesQuery.data, categoryId]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert("Kích thước ảnh tối đa là 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUri = reader.result as string;
+      uploadImage.mutate(
+        { dataUri, fileName: file.name },
+        {
+          onSuccess: (result) => {
+            setForm((current) => ({ ...current, imageUrl: result.url }));
+          }
+        }
+      );
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setForm((current) => ({ ...current, imageUrl: "" }));
+    uploadImage.reset();
+  };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -101,6 +141,64 @@ export const AdminCategoryFormView = () => {
               />
             </div>
 
+            {/* Category Image Upload */}
+            <div className="form-group full-width">
+              <label>Ảnh đại diện danh mục</label>
+              <div className="category-image-upload-area">
+                {form.imageUrl ? (
+                  <div className="category-image-preview">
+                    <img src={form.imageUrl} alt="Ảnh danh mục" />
+                    <button type="button" className="admin-btn-sm secondary" onClick={handleRemoveImage}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                      <span>Xóa ảnh</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="category-image-placeholder">
+                    {uploadImage.isPending ? (
+                      <div className="upload-loading">
+                        <div className="admin-spinner" />
+                        <p>Đang tải ảnh lên Cloudinary...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        <p>Chọn ảnh đại diện cho danh mục</p>
+                        <button
+                          type="button"
+                          className="admin-btn-sm primary"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          Chọn ảnh
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleFileSelect}
+                  style={{ display: "none" }}
+                />
+
+                {uploadImage.isError && (
+                  <p className="status-error mt-12">
+                    Tải ảnh thất bại: {uploadImage.error.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="form-group">
               <label>Trạng thái</label>
               <select
@@ -116,7 +214,7 @@ export const AdminCategoryFormView = () => {
           {mutationError && <p className="status-error mt-12">{mutationError.message}</p>}
 
           <div className="form-actions-box mt-20">
-            <button type="submit" className="admin-btn primary" disabled={isPending}>
+            <button type="submit" className="admin-btn primary" disabled={isPending || uploadImage.isPending}>
               {isPending ? "Đang lưu..." : isEdit ? "Lưu thay đổi" : "Tạo danh mục"}
             </button>
             <Link to="/admin/categories" className="admin-btn secondary">

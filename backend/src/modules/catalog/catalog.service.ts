@@ -32,6 +32,7 @@ interface CategoryResponse {
   name: string;
   slug: string;
   description?: string;
+  imageUrl?: string;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -87,6 +88,7 @@ const toCategoryResponse = (category: CategoryRecord): CategoryResponse => ({
   name: category.name,
   slug: category.slug,
   description: category.description,
+  imageUrl: category.imageUrl,
   status: category.status,
   createdAt: category.createdAt,
   updatedAt: category.updatedAt
@@ -108,7 +110,7 @@ const toProductResponse = (product: ProductRecord): ProductResponse => ({
   updatedAt: product.updatedAt
 });
 
-const categorySelect = "_id name slug description status createdAt updatedAt";
+const categorySelect = "_id name slug description imageUrl status createdAt updatedAt";
 const productSelect = "_id name slug description categoryId roomType priceMinor currency stockQuantity images status createdAt updatedAt";
 const lowStockThreshold = 5;
 

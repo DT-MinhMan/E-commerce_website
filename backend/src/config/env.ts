@@ -24,6 +24,7 @@ export interface AppConfig {
   cloudinaryApiKey?: string;
   cloudinaryApiSecret?: string;
   cloudinaryProductFolder: string;
+  cloudinaryCategoryFolder: string;
 }
 
 let cachedConfig: AppConfig | null = null;
@@ -123,7 +124,8 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
     cloudinaryCloudName: env.CLOUDINARY_CLOUD_NAME,
     cloudinaryApiKey: env.CLOUDINARY_API_KEY,
     cloudinaryApiSecret: env.CLOUDINARY_API_SECRET,
-    cloudinaryProductFolder: env.CLOUDINARY_PRODUCT_FOLDER ?? "ecommerce/products"
+    cloudinaryProductFolder: env.CLOUDINARY_PRODUCT_FOLDER ?? "ecommerce/products",
+    cloudinaryCategoryFolder: env.CLOUDINARY_CATEGORY_FOLDER ?? "ecommerce/categories"
   };
 };
 

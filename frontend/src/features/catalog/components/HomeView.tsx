@@ -66,7 +66,7 @@ export const HomeView = () => {
               >
                 <div className="category-card-media">
                   <img
-                    src={getCategoryImage(category.name, category.slug)}
+                    src={category.imageUrl || getCategoryImage(category.name, category.slug)}
                     alt={category.name}
                     loading="lazy"
                   />

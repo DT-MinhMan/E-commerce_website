@@ -118,6 +118,11 @@ export const uploadAdminProductImage = async (input: { dataUri: string; fileName
   return response.data.data.image;
 };
 
+export const uploadAdminCategoryImage = async (input: { dataUri: string; fileName?: string }): Promise<{ url: string; publicId: string }> => {
+  const response = await apiClient.post<ProductImageUploadResponse>("/admin/uploads/category-image", input, { timeout: 30000 });
+  return response.data.data.image;
+};
+
 export const listAdminOrders = async (params: AdminOrderListParams, signal?: AbortSignal): Promise<AdminOrderListResult> => {
   const response = await apiClient.get<OrderListResponse>("/admin/orders", {
     params: compactParams(params),

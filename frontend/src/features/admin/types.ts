@@ -46,6 +46,7 @@ export interface CategoryWriteInput {
   name: string;
   slug?: string;
   description?: string;
+  imageUrl?: string;
   status?: CatalogStatus;
 }
 

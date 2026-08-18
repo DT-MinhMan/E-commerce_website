@@ -4,6 +4,7 @@ export interface CategoryInput {
   name: string;
   slug?: string;
   description?: string;
+  imageUrl?: string;
   status?: CategoryStatus;
 }
 
@@ -11,6 +12,7 @@ export interface CategoryUpdateInput {
   name?: string;
   slug?: string;
   description?: string;
+  imageUrl?: string;
   status?: CategoryStatus;
 }
 

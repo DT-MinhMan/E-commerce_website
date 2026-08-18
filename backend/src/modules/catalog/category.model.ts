@@ -6,6 +6,7 @@ export interface Category {
   name: string;
   slug: string;
   description?: string;
+  imageUrl?: string;
   status: CategoryStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -34,6 +35,10 @@ const categorySchema = new Schema<Category>(
       type: String,
       trim: true,
       maxlength: 500
+    },
+    imageUrl: {
+      type: String,
+      trim: true
     },
     status: {
       type: String,

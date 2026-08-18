@@ -276,22 +276,28 @@ export const parseSlugParam = (value: string | undefined): string => {
 };
 
 export const parseCategoryCreateInput = (body: unknown): CategoryInput => {
-  const parsed = parseBody(body, ["name", "slug", "description", "status"]);
+  const parsed = parseBody(body, ["name", "slug", "description", "imageUrl", "status"]);
   const name = requiredString(parsed, "name");
   const description = optionalString(parsed, "description");
+  const imageUrl = optionalString(parsed, "imageUrl");
   const status = parseStatus(parsed, "status", CATEGORY_STATUSES);
   const slug = parseSlug(parsed, "slug", name);
 
   assertStringLength(name, "name", 2, 120);
   assertOptionalStringLength(description, "description", 500);
 
-  return { name, slug, description, status };
+  if (imageUrl !== undefined) {
+    assertHttpUrl(imageUrl, "imageUrl");
+  }
+
+  return { name, slug, description, imageUrl, status };
 };
 
 export const parseCategoryUpdateInput = (body: unknown): CategoryUpdateInput => {
-  const parsed = parseBody(body, ["name", "slug", "description", "status"]);
+  const parsed = parseBody(body, ["name", "slug", "description", "imageUrl", "status"]);
   const name = optionalString(parsed, "name");
   const description = optionalString(parsed, "description");
+  const imageUrl = optionalString(parsed, "imageUrl");
   const status = parseStatus(parsed, "status", CATEGORY_STATUSES);
   const slug = parseSlug(parsed, "slug");
   const input: CategoryUpdateInput = {};
@@ -308,6 +314,11 @@ export const parseCategoryUpdateInput = (body: unknown): CategoryUpdateInput => 
   if (description !== undefined) {
     assertOptionalStringLength(description, "description", 500);
     input.description = description;
+  }
+
+  if (imageUrl !== undefined) {
+    assertHttpUrl(imageUrl, "imageUrl");
+    input.imageUrl = imageUrl;
   }
 
   if (status !== undefined) {

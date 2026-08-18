@@ -18,6 +18,7 @@ export interface Category {
   name: string;
   slug: string;
   description?: string;
+  imageUrl?: string;
   status: CatalogStatus;
   createdAt: string;
   updatedAt: string;

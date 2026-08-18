@@ -93,3 +93,48 @@ export const uploadProductImageToCloudinary = async (
     publicId: payload.public_id
   };
 };
+
+export const uploadCategoryImageToCloudinary = async (
+  input: ProductImageUploadInput,
+  config: AppConfig = getConfig()
+): Promise<ProductImageUploadResult> => {
+  assertCloudinaryConfigured(config);
+
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const signedParams: Record<string, string> = {
+    folder: config.cloudinaryCategoryFolder,
+    timestamp
+  };
+  const publicId = publicIdFromFileName(input.fileName);
+
+  if (publicId) {
+    signedParams.public_id = publicId;
+  }
+
+  const form = new FormData();
+  form.set("file", input.dataUri);
+  form.set("api_key", config.cloudinaryApiKey as string);
+  form.set("signature", signCloudinaryParams(signedParams, config.cloudinaryApiSecret as string));
+
+  Object.entries(signedParams).forEach(([key, value]) => form.set(key, value));
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudinaryCloudName}/image/upload`, {
+    method: "POST",
+    body: form
+  });
+
+  if (!response.ok) {
+    throw new AppError(502, "CLOUDINARY_UPLOAD_FAILED", "Cloudinary image upload failed");
+  }
+
+  const payload = (await response.json()) as CloudinaryUploadResponse;
+
+  if (!payload.secure_url || !payload.public_id) {
+    throw new AppError(502, "CLOUDINARY_UPLOAD_INVALID", "Cloudinary upload response is invalid");
+  }
+
+  return {
+    url: payload.secure_url,
+    publicId: payload.public_id
+  };
+};

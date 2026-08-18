@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createAdminCategory,
   createAdminProduct,
@@ -13,6 +13,7 @@ import {
   updateAdminProduct,
   updateAdminProductStatus,
   updateAdminProductStock,
+  uploadAdminCategoryImage,
   uploadAdminProductImage
 } from "../services/adminService.js";
 import type { ApiError } from "../../../lib/apiClient.js";
@@ -178,6 +179,11 @@ export const useUpdateAdminProduct = (productId: string) => {
 export const useUploadAdminProductImage = () =>
   useMutation<{ url: string; publicId: string }, ApiError, { dataUri: string; fileName?: string }>({
     mutationFn: uploadAdminProductImage
+  });
+
+export const useUploadAdminCategoryImage = () =>
+  useMutation<{ url: string; publicId: string }, ApiError, { dataUri: string; fileName?: string }>({
+    mutationFn: uploadAdminCategoryImage
   });
 
 export const useUpdateAdminProductStock = () => {
