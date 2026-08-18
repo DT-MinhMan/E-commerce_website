@@ -1,10 +1,11 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   useAdminCategoriesQuery,
   useAdminProductDetailQuery,
   useCreateAdminProduct,
-  useUpdateAdminProduct
+  useUpdateAdminProduct,
+  useUploadAdminProductImage
 } from "../../admin/hooks/useAdminQueries.js";
 import type { ProductWriteInput } from "../../admin/types.js";
 import { ROOM_TYPE_LABELS, type RoomType } from "../../catalog/types.js";
@@ -21,6 +22,8 @@ const initialForm: ProductWriteInput = {
   images: []
 };
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 export const AdminProductFormView = () => {
   const { productId = "" } = useParams();
   const isEdit = productId.length > 0;
@@ -29,7 +32,11 @@ export const AdminProductFormView = () => {
   const productQuery = useAdminProductDetailQuery(productId);
   const createProduct = useCreateAdminProduct();
   const updateProduct = useUpdateAdminProduct(productId);
+  const uploadImage = useUploadAdminProductImage();
   const [form, setForm] = useState<ProductWriteInput>(initialForm);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!productQuery.data) {
@@ -45,26 +52,79 @@ export const AdminProductFormView = () => {
       priceMinor: productQuery.data.priceMinor,
       currency: productQuery.data.currency,
       stockQuantity: productQuery.data.stockQuantity,
-      images: productQuery.data.images,
+      images: productQuery.data.images ?? [],
       status: productQuery.data.status
     });
   }, [productQuery.data]);
 
   const setField = (key: keyof ProductWriteInput, value: unknown) => {
+    setSaveSuccess(false);
     setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      alert("Kích thước ảnh tối đa là 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUri = reader.result as string;
+      uploadImage.mutate(
+        { dataUri, fileName: file.name },
+        {
+          onSuccess: (result) => {
+            setForm((current) => ({
+              ...current,
+              images: [{ url: result.url, publicId: result.publicId, alt: current.name }]
+            }));
+            setSaveSuccess(false);
+          }
+        }
+      );
+    };
+    reader.readAsDataURL(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSaveSuccess(false);
+    setForm((current) => ({ ...current, images: [] }));
+    uploadImage.reset();
+  };
+
+  const handleAltChange = (altText: string) => {
+    setSaveSuccess(false);
+    setForm((current) => {
+      if (!current.images || current.images.length === 0) return current;
+      const updated = [{ ...current.images[0]!, alt: altText }];
+      return { ...current, images: updated };
+    });
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSaveSuccess(false);
     const mutation = isEdit ? updateProduct : createProduct;
 
     mutation.mutate(form, {
-      onSuccess: (product) => navigate(`/admin/products/${product.id}/edit`)
+      onSuccess: (product) => {
+        setSaveSuccess(true);
+        navigate(`/admin/products/${product.id}/edit`);
+      }
     });
   };
 
   const mutationError = createProduct.error ?? updateProduct.error;
   const isPending = createProduct.isPending || updateProduct.isPending;
+  const currentImage = form.images && form.images.length > 0 ? form.images[0] : null;
 
   if (isEdit && productQuery.isLoading) {
     return (
@@ -137,7 +197,90 @@ export const AdminProductFormView = () => {
             </div>
           </div>
 
-          {/* Section 2: Pricing & Stock */}
+          {/* Section 2: Image Management */}
+          <div className="panel admin-form-card">
+            <div className="card-header">
+              <h3>Hình ảnh sản phẩm</h3>
+              <p>Tải lên ảnh đại diện cho sản phẩm</p>
+            </div>
+
+            <div className="product-image-upload-area">
+              {currentImage ? (
+                <div className="product-image-preview">
+                  <img src={currentImage.url} alt={currentImage.alt || form.name || "Ảnh sản phẩm"} />
+                  <div className="product-image-info">
+                    <div className="form-group">
+                      <label>Mô tả ảnh (Alt Text / Chú thích)</label>
+                      <input
+                        type="text"
+                        value={currentImage.alt ?? ""}
+                        onChange={(e) => handleAltChange(e.target.value)}
+                        placeholder="Nhập văn bản mô tả hình ảnh..."
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "12px" }}>
+                      <button
+                        type="button"
+                        className="admin-btn-sm primary"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <span>Chọn ảnh mới</span>
+                      </button>
+                      <button type="button" className="admin-btn-sm secondary" onClick={handleRemoveImage}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                        <span>Xóa ảnh này</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : uploadImage.isPending ? (
+                <div className="upload-loading">
+                  <div className="admin-spinner" />
+                  <p>Đang tải ảnh lên Cloudinary...</p>
+                </div>
+              ) : (
+                <div className="product-image-placeholder">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  <p>Chọn ảnh đại diện cho sản phẩm</p>
+                  <button
+                    type="button"
+                    className="admin-btn-sm primary"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Tải ảnh từ máy
+                  </button>
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handleFileSelect}
+                style={{ display: "none" }}
+              />
+
+              {uploadImage.isError && (
+                <p className="status-error mt-12">
+                  Tải ảnh thất bại: {uploadImage.error.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Section 3: Pricing & Stock */}
           <div className="panel admin-form-card">
             <div className="card-header">
               <h3>Giá cả & Tồn kho</h3>
@@ -172,7 +315,7 @@ export const AdminProductFormView = () => {
         </div>
 
         <div className="admin-form-side">
-          {/* Section 3: Categories & Status */}
+          {/* Section 4: Categories & Status */}
           <div className="panel admin-form-card">
             <div className="card-header">
               <h3>Phân loại & Trạng thái</h3>
@@ -212,9 +355,10 @@ export const AdminProductFormView = () => {
             </div>
 
             {mutationError && <p className="status-error mt-12">{mutationError.message}</p>}
+            {saveSuccess && <p className="status-success mt-12">Đã lưu thay đổi sản phẩm thành công!</p>}
 
             <div className="form-actions-box">
-              <button type="submit" className="admin-btn primary full-width" disabled={isPending}>
+              <button type="submit" className="admin-btn primary full-width" disabled={isPending || uploadImage.isPending}>
                 {isPending ? "Đang lưu..." : isEdit ? "Lưu thay đổi" : "Tạo sản phẩm"}
               </button>
             </div>
