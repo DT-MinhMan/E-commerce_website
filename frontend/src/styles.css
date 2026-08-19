@@ -5156,3 +5156,71 @@ textarea {
     height: 280px;
   }
 }
+
+/* Admin Order Status Tabs & Input Clear */
+.admin-status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.status-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.status-tab-btn:hover {
+  color: var(--color-text);
+}
+
+.status-tab-btn.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 700;
+}
+
+.input-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 14px;
+  transition: color 0.15s ease;
+}
+
+.input-clear-btn:hover {
+  color: var(--color-text);
+}
+
+.pagination-info {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.account-orders-btn {
+  gap: 8px;
+}
+
+

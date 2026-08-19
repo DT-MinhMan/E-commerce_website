@@ -1,5 +1,6 @@
 import mongoose, { Types, type FilterQuery, type SortOrder } from "mongoose";
 import { AppError } from "../../common/errors/AppError.js";
+import { makeVietnameseSearchRegex } from "../../common/utils/vietnameseSearch.js";
 import { CategoryModel, type Category } from "./category.model.js";
 import { ProductModel, type Product, type ProductImage } from "./product.model.js";
 import type {
@@ -199,7 +200,7 @@ const buildProductListFilter = async (query: ProductListQuery, publicOnly: boole
   }
 
   if (query.q) {
-    const pattern = { $regex: escapeRegex(query.q), $options: "i" };
+    const pattern = { $regex: makeVietnameseSearchRegex(query.q), $options: "i" };
     filter.$or = [{ name: pattern }, { description: pattern }];
   }
 

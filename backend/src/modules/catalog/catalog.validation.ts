@@ -92,7 +92,7 @@ const slugify = (value: string): string =>
 
 const parseSlug = (body: Record<string, unknown>, field: string, fallbackName?: string): string | undefined => {
   const rawSlug = optionalString(body, field);
-  const slug = rawSlug ? normalizeSlug(rawSlug) : fallbackName ? slugify(fallbackName) : undefined;
+  const slug = rawSlug ? slugify(rawSlug) : fallbackName ? slugify(fallbackName) : undefined;
 
   if (slug !== undefined && !isSlug(slug)) {
     throw new AppError(400, "VALIDATION_ERROR", `${field} must be a valid slug`);

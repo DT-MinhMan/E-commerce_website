@@ -5,6 +5,7 @@ import { syncDatabaseIndexes } from "../../src/database/syncIndexes.js";
 export const connectTestDatabase = async (): Promise<void> => {
   if (mongoose.connection.readyState !== 1) {
     await mongoose.connect(process.env.MONGODB_URI as string, { serverSelectionTimeoutMS: 5000 });
+    await syncDatabaseIndexes();
   }
 };
 
@@ -17,7 +18,8 @@ export const clearTestDatabase = async (): Promise<void> => {
     throw new Error(`Refusing to clear non-test database: ${mongoose.connection.name}`);
   }
 
-  await mongoose.connection.db.dropDatabase();
+  const collections = await mongoose.connection.db.collections();
+  await Promise.all(collections.map((collection) => collection.deleteMany({})));
   await syncDatabaseIndexes();
 };
 

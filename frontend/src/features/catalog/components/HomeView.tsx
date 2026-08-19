@@ -16,7 +16,7 @@ const getCategoryImage = (categoryName: string, categorySlug: string): string =>
 
 export const HomeView = () => {
   const categoriesQuery = useCategoriesQuery();
-  const productsQuery = useProductsQuery({ page: 1, limit: 4, sort: "newest" });
+  const productsQuery = useProductsQuery({ page: 1, limit: 8, sort: "newest" });
   const categories = categoriesQuery.data ?? [];
   const products = productsQuery.data?.products ?? [];
 
@@ -97,7 +97,7 @@ export const HomeView = () => {
 
         {productsQuery.isLoading && (
           <div className="product-grid product-grid-featured">
-            {Array.from({ length: 4 }).map((_, index) => (
+            {Array.from({ length: 8 }).map((_, index) => (
               <div className="product-card product-card-skeleton" key={index}>
                 <div className="product-card-image" />
                 <div className="product-card-body">

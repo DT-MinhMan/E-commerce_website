@@ -351,6 +351,34 @@ describe("orders API", () => {
     expect(updated.body.data.order.orderStatus).toBe("PROCESSING");
   });
 
+  it("allows admin to search orders by orderNumber, recipientName, or phone", async () => {
+    const userId = customerId();
+    const product = await createProduct({ priceMinor: 1000 });
+    await OrderModel.create({
+      orderNumber: "ORD-20260819-111111",
+      userId,
+      items: [{ productId: product._id, productName: product.name, productSlug: product.slug, unitPriceMinor: 1000, quantity: 1, lineTotalMinor: 1000 }],
+      shippingAddress: { ...shippingAddress, recipientName: "Nguyen Van A", phone: "0901234567" },
+      subtotalMinor: 1000,
+      shippingFeeMinor: 0,
+      totalMinor: 1000,
+      currency: "USD",
+      orderStatus: "PENDING_PAYMENT",
+      paymentStatus: "PENDING"
+    });
+
+    const searchByName = await request(app).get("/api/v1/admin/orders?q=Nguyen").set("Authorization", `Bearer ${adminToken()}`).expect(200);
+    expect(searchByName.body.data.orders).toHaveLength(1);
+    expect(searchByName.body.data.orders[0].shippingAddress.recipientName).toBe("Nguyen Van A");
+
+    const searchByPhone = await request(app).get("/api/v1/admin/orders?q=090123").set("Authorization", `Bearer ${adminToken()}`).expect(200);
+    expect(searchByPhone.body.data.orders).toHaveLength(1);
+
+    const searchByNumber = await request(app).get("/api/v1/admin/orders?q=111111").set("Authorization", `Bearer ${adminToken()}`).expect(200);
+    expect(searchByNumber.body.data.orders).toHaveLength(1);
+  });
+
+
   it("summarizes admin dashboard without counting unpaid revenue", async () => {
     const userId = customerId();
     const product = await createProduct({ name: "Dashboard Keyboard", priceMinor: 2000, stockQuantity: 2 });

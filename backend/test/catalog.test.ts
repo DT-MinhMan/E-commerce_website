@@ -174,6 +174,42 @@ describe("catalog API", () => {
     expect(invalidSort.body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("supports accent-insensitive Vietnamese product search", async () => {
+    const furniture = await createCategory("furniture");
+    await createProduct("ghe-ergonomic", furniture._id, { name: "Ghế công thái học Ergonomic" });
+    await createProduct("ban-lam-viec", furniture._id, { name: "Bàn làm việc gỗ sồi" });
+    await createProduct("den-trang-tri", furniture._id, { name: "Đèn trang trí phòng khách" });
+    await createProduct("keyboard-pro-special", furniture._id, { name: "Keyboard [Pro]" });
+
+    // 1. Unaccented query -> Accented match (ghe -> Ghế)
+    const resUnaccented = await request(app).get("/api/v1/products?q=ghe").expect(200);
+    expect(resUnaccented.body.data.products.map((p: { slug: string }) => p.slug)).toEqual(["ghe-ergonomic"]);
+
+    // 2. Accented query -> Accented match (ghế -> Ghế)
+    const resAccented = await request(app).get("/api/v1/products?q=ghế").expect(200);
+    expect(resAccented.body.data.products.map((p: { slug: string }) => p.slug)).toEqual(["ghe-ergonomic"]);
+
+    // 3. d matches đ (den -> Đèn)
+    const resDUnaccented = await request(app).get("/api/v1/products?q=den").expect(200);
+    expect(resDUnaccented.body.data.products.map((p: { slug: string }) => p.slug)).toEqual(["den-trang-tri"]);
+
+    // 4. đ matches đ (đèn -> Đèn)
+    const resDAccented = await request(app).get("/api/v1/products?q=đèn").expect(200);
+    expect(resDAccented.body.data.products.map((p: { slug: string }) => p.slug)).toEqual(["den-trang-tri"]);
+
+    // 5. Substring match (ban -> Bàn làm việc)
+    const resSubstring = await request(app).get("/api/v1/products?q=ban").expect(200);
+    expect(resSubstring.body.data.products.map((p: { slug: string }) => p.slug)).toEqual(["ban-lam-viec"]);
+
+    // 6. Regex special characters preserved safely ([Pro])
+    const resSpecial = await request(app).get("/api/v1/products?q=Keyboard%20[Pro]").expect(200);
+    expect(resSpecial.body.data.products.map((p: { slug: string }) => p.slug)).toEqual(["keyboard-pro-special"]);
+
+    // 7. Non-matching query
+    const resEmpty = await request(app).get("/api/v1/products?q=xyz123").expect(200);
+    expect(resEmpty.body.data.products).toHaveLength(0);
+  });
+
   it("returns public product detail only for active products in active categories", async () => {
     const activeCategory = await createCategory("active-category");
     const inactiveCategory = await createCategory("inactive-category", "INACTIVE");

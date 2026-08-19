@@ -296,7 +296,12 @@ export const listAdminOrders = async (
   }
 
   if (query.q) {
-    filter.orderNumber = { $regex: escapeRegex(query.q), $options: "i" };
+    const searchRegex = { $regex: escapeRegex(query.q), $options: "i" };
+    filter.$or = [
+      { orderNumber: searchRegex },
+      { "shippingAddress.recipientName": searchRegex },
+      { "shippingAddress.phone": searchRegex }
+    ];
   }
 
   const skip = (query.page - 1) * query.limit;

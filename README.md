@@ -170,7 +170,6 @@ pnpm db:seed
 ```
 
 > **Tài khoản mặc định khởi tạo:**
-> - **Admin**: `admin@example.com` / `ChangeMe123!`
 > - **Customer**: `customer@example.com` / `ChangeMe123!`
 
 ---
