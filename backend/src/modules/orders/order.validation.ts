@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 import { AppError } from "../../common/errors/AppError.js";
-import { ORDER_STATUSES, PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "../../database/enums.js";
+import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES, type OrderStatus, type PaymentMethod, type PaymentStatus } from "../../database/enums.js";
 import type { AdminOrderListQuery, AdminOrderStatusUpdateInput, CheckoutInput, OrderListQuery, ShippingAddressInput } from "./order.types.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -35,7 +35,7 @@ const parseRequiredString = (body: Record<string, unknown>, field: keyof Shippin
 };
 
 export const parseCheckoutInput = (body: unknown): CheckoutInput => {
-  const parsed = parseBody(body, ["shippingAddress"]);
+  const parsed = parseBody(body, ["shippingAddress", "paymentMethod"]);
   const shippingAddress = parsed.shippingAddress;
 
   if (!isRecord(shippingAddress)) {
@@ -58,6 +58,8 @@ export const parseCheckoutInput = (body: unknown): CheckoutInput => {
     throw new AppError(400, "CHECKOUT_INVALID_ADDRESS", "addressLine2 is invalid");
   }
 
+  const paymentMethod = parseOptionalEnum<PaymentMethod>(parsed.paymentMethod, PAYMENT_METHODS, "paymentMethod") ?? "COD";
+
   return {
     shippingAddress: {
       recipientName: parseRequiredString(shippingAddress, "recipientName", 120),
@@ -68,7 +70,8 @@ export const parseCheckoutInput = (body: unknown): CheckoutInput => {
       stateOrProvince: parseRequiredString(shippingAddress, "stateOrProvince", 120),
       postalCode: parseRequiredString(shippingAddress, "postalCode", 32),
       countryCode
-    }
+    },
+    paymentMethod
   };
 };
 

@@ -13,22 +13,16 @@ export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
 export const ROOM_TYPES = ["LIVING_ROOM", "BEDROOM", "DINING_ROOM", "WORKING_ROOM", "OUTDOOR", "DECOR"] as const;
 export type RoomType = (typeof ROOM_TYPES)[number];
 
-export const ORDER_STATUSES = [
-  "PENDING_PAYMENT",
-  "PAID",
-  "PROCESSING",
-  "SHIPPED",
-  "COMPLETED",
-  "CANCELLED",
-  "REFUNDED",
-  "PAYMENT_REVIEW"
-] as const;
+export const ORDER_STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "RETURNED"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export const PAYMENT_STATUSES = ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REFUNDED"] as const;
+export const PAYMENT_STATUSES = ["PENDING", "PAID", "FAILED", "REFUNDED"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-export const PAYMENT_PROVIDERS = ["STRIPE"] as const;
+export const PAYMENT_METHODS = ["COD", "CARD"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const PAYMENT_PROVIDERS = ["STRIPE", "COD"] as const;
 export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 export const WEBHOOK_PROCESSING_STATUSES = ["RECEIVED", "PROCESSING", "PROCESSED", "FAILED", "IGNORED"] as const;

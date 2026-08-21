@@ -117,7 +117,7 @@ describe("orders API", () => {
       shippingFeeMinor: 0,
       totalMinor: 10000,
       currency: "USD",
-      orderStatus: "PENDING_PAYMENT",
+      orderStatus: "PENDING",
       paymentStatus: "PENDING",
       shippingAddress
     });
@@ -134,7 +134,7 @@ describe("orders API", () => {
     const payment = await PaymentModel.findOne({ orderId: order.id }).lean().exec();
     expect(payment).toMatchObject({
       userId,
-      provider: "STRIPE",
+      provider: "COD",
       amountMinor: 10000,
       currency: "USD",
       status: "PENDING"
@@ -310,12 +310,13 @@ describe("orders API", () => {
         }
       ],
       shippingAddress,
+      paymentMethod: "CARD",
       subtotalMinor: 2400,
       shippingFeeMinor: 0,
       totalMinor: 2400,
       currency: "USD",
-      orderStatus: "PAID",
-      paymentStatus: "SUCCEEDED",
+      orderStatus: "PROCESSING",
+      paymentStatus: "PAID",
       paidAt: new Date()
     });
 
@@ -323,7 +324,7 @@ describe("orders API", () => {
     await request(app).get("/api/v1/admin/orders").set("Authorization", `Bearer ${customerToken(userId)}`).expect(403);
 
     const list = await request(app)
-      .get("/api/v1/admin/orders?orderStatus=PAID&q=000001")
+      .get("/api/v1/admin/orders?orderStatus=PROCESSING&q=000001")
       .set("Authorization", `Bearer ${adminToken()}`)
       .expect(200);
     expect(list.body.data.orders).toHaveLength(1);
@@ -332,23 +333,23 @@ describe("orders API", () => {
     const invalidTransition = await request(app)
       .patch(`/api/v1/admin/orders/${order._id.toString()}/status`)
       .set("Authorization", `Bearer ${adminToken()}`)
-      .send({ expectedCurrentStatus: "PAID", nextStatus: "COMPLETED" })
+      .send({ expectedCurrentStatus: "PROCESSING", nextStatus: "COMPLETED" })
       .expect(400);
     expect(invalidTransition.body.error.code).toBe("ORDER_STATUS_TRANSITION_INVALID");
 
     const conflict = await request(app)
       .patch(`/api/v1/admin/orders/${order._id.toString()}/status`)
       .set("Authorization", `Bearer ${adminToken()}`)
-      .send({ expectedCurrentStatus: "PENDING_PAYMENT", nextStatus: "CANCELLED" })
+      .send({ expectedCurrentStatus: "PENDING", nextStatus: "CANCELLED" })
       .expect(409);
     expect(conflict.body.error.code).toBe("ORDER_STATUS_CONFLICT");
 
     const updated = await request(app)
       .patch(`/api/v1/admin/orders/${order._id.toString()}/status`)
       .set("Authorization", `Bearer ${adminToken()}`)
-      .send({ expectedCurrentStatus: "PAID", nextStatus: "PROCESSING" })
+      .send({ expectedCurrentStatus: "PROCESSING", nextStatus: "SHIPPED" })
       .expect(200);
-    expect(updated.body.data.order.orderStatus).toBe("PROCESSING");
+    expect(updated.body.data.order.orderStatus).toBe("SHIPPED");
   });
 
   it("allows admin to search orders by orderNumber, recipientName, or phone", async () => {
@@ -359,11 +360,12 @@ describe("orders API", () => {
       userId,
       items: [{ productId: product._id, productName: product.name, productSlug: product.slug, unitPriceMinor: 1000, quantity: 1, lineTotalMinor: 1000 }],
       shippingAddress: { ...shippingAddress, recipientName: "Nguyen Van A", phone: "0901234567" },
+      paymentMethod: "COD",
       subtotalMinor: 1000,
       shippingFeeMinor: 0,
       totalMinor: 1000,
       currency: "USD",
-      orderStatus: "PENDING_PAYMENT",
+      orderStatus: "PENDING",
       paymentStatus: "PENDING"
     });
 
@@ -377,7 +379,6 @@ describe("orders API", () => {
     const searchByNumber = await request(app).get("/api/v1/admin/orders?q=111111").set("Authorization", `Bearer ${adminToken()}`).expect(200);
     expect(searchByNumber.body.data.orders).toHaveLength(1);
   });
-
 
   it("summarizes admin dashboard without counting unpaid revenue", async () => {
     const userId = customerId();
@@ -396,12 +397,13 @@ describe("orders API", () => {
         }
       ],
       shippingAddress,
+      paymentMethod: "CARD",
       subtotalMinor: 4000,
       shippingFeeMinor: 0,
       totalMinor: 4000,
       currency: "USD",
-      orderStatus: "PAID",
-      paymentStatus: "SUCCEEDED",
+      orderStatus: "PROCESSING",
+      paymentStatus: "PAID",
       paidAt: new Date()
     });
     await PaymentModel.create({
@@ -410,7 +412,7 @@ describe("orders API", () => {
       provider: "STRIPE",
       amountMinor: 4000,
       currency: "USD",
-      status: "SUCCEEDED",
+      status: "PAID",
       paidAt: new Date()
     });
 
@@ -428,17 +430,18 @@ describe("orders API", () => {
         }
       ],
       shippingAddress,
+      paymentMethod: "COD",
       subtotalMinor: 2000,
       shippingFeeMinor: 0,
       totalMinor: 2000,
       currency: "USD",
-      orderStatus: "PENDING_PAYMENT",
+      orderStatus: "PENDING",
       paymentStatus: "PENDING"
     });
     await PaymentModel.create({
       orderId: pendingOrder._id,
       userId,
-      provider: "STRIPE",
+      provider: "COD",
       amountMinor: 2000,
       currency: "USD",
       status: "PENDING"
@@ -458,4 +461,202 @@ describe("orders API", () => {
       revenueMinor: 4000
     });
   });
+
+  describe("customer order cancellation", () => {
+    it("allows a customer to cancel their own PENDING unpaid order", async () => {
+      const userId = customerId();
+      const product = await createProduct();
+      const order = await OrderModel.create({
+        orderNumber: "ORD-20260801-000099",
+        userId,
+        items: [
+          {
+            productId: product._id,
+            productName: product.name,
+            productSlug: product.slug,
+            unitPriceMinor: 2000,
+            quantity: 1,
+            lineTotalMinor: 2000
+          }
+        ],
+        shippingAddress,
+        paymentMethod: "COD",
+        subtotalMinor: 2000,
+        shippingFeeMinor: 0,
+        totalMinor: 2000,
+        currency: "USD",
+        orderStatus: "PENDING",
+        paymentStatus: "PENDING"
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/orders/${order._id.toString()}/cancel`)
+        .set("Authorization", `Bearer ${customerToken(userId)}`)
+        .expect(200);
+
+      expect(response.body.data.order.orderStatus).toBe("CANCELLED");
+      expect(response.body.data.order.cancelledAt).toBeDefined();
+
+      const updatedInDb = await OrderModel.findById(order._id).lean().exec();
+      expect(updatedInDb?.orderStatus).toBe("CANCELLED");
+      expect(updatedInDb?.cancelledAt).toBeDefined();
+    });
+
+    it("rejects cancellation of another customer's order with 404", async () => {
+      const ownerId = customerId();
+      const strangerId = customerId();
+      const product = await createProduct();
+      const order = await OrderModel.create({
+        orderNumber: "ORD-20260801-000098",
+        userId: ownerId,
+        items: [
+          {
+            productId: product._id,
+            productName: product.name,
+            productSlug: product.slug,
+            unitPriceMinor: 2000,
+            quantity: 1,
+            lineTotalMinor: 2000
+          }
+        ],
+        shippingAddress,
+        paymentMethod: "COD",
+        subtotalMinor: 2000,
+        shippingFeeMinor: 0,
+        totalMinor: 2000,
+        currency: "USD",
+        orderStatus: "PENDING",
+        paymentStatus: "PENDING"
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/orders/${order._id.toString()}/cancel`)
+        .set("Authorization", `Bearer ${customerToken(strangerId)}`)
+        .expect(404);
+
+      expect(response.body.error.code).toBe("ORDER_NOT_FOUND");
+    });
+
+    it("rejects cancellation if order status is PROCESSING or COMPLETED with 409", async () => {
+      const userId = customerId();
+      const product = await createProduct();
+      const order = await OrderModel.create({
+        orderNumber: "ORD-20260801-000097",
+        userId,
+        items: [
+          {
+            productId: product._id,
+            productName: product.name,
+            productSlug: product.slug,
+            unitPriceMinor: 2000,
+            quantity: 1,
+            lineTotalMinor: 2000
+          }
+        ],
+        shippingAddress,
+        paymentMethod: "COD",
+        subtotalMinor: 2000,
+        shippingFeeMinor: 0,
+        totalMinor: 2000,
+        currency: "USD",
+        orderStatus: "PROCESSING",
+        paymentStatus: "PENDING"
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/orders/${order._id.toString()}/cancel`)
+        .set("Authorization", `Bearer ${customerToken(userId)}`)
+        .expect(409);
+
+      expect(response.body.error.code).toBe("ORDER_NOT_CANCELLABLE");
+    });
+
+    it("rejects cancellation if payment status is PAID with 409", async () => {
+      const userId = customerId();
+      const product = await createProduct();
+      const order = await OrderModel.create({
+        orderNumber: "ORD-20260801-000096",
+        userId,
+        items: [
+          {
+            productId: product._id,
+            productName: product.name,
+            productSlug: product.slug,
+            unitPriceMinor: 2000,
+            quantity: 1,
+            lineTotalMinor: 2000
+          }
+        ],
+        shippingAddress,
+        paymentMethod: "CARD",
+        subtotalMinor: 2000,
+        shippingFeeMinor: 0,
+        totalMinor: 2000,
+        currency: "USD",
+        orderStatus: "PENDING",
+        paymentStatus: "PAID"
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/orders/${order._id.toString()}/cancel`)
+        .set("Authorization", `Bearer ${customerToken(userId)}`)
+        .expect(409);
+
+      expect(response.body.error.code).toBe("ORDER_NOT_CANCELLABLE");
+    });
+
+    it("rejects cancellation if order is already CANCELLED with 409", async () => {
+      const userId = customerId();
+      const product = await createProduct();
+      const order = await OrderModel.create({
+        orderNumber: "ORD-20260801-000095",
+        userId,
+        items: [
+          {
+            productId: product._id,
+            productName: product.name,
+            productSlug: product.slug,
+            unitPriceMinor: 2000,
+            quantity: 1,
+            lineTotalMinor: 2000
+          }
+        ],
+        shippingAddress,
+        paymentMethod: "COD",
+        subtotalMinor: 2000,
+        shippingFeeMinor: 0,
+        totalMinor: 2000,
+        currency: "USD",
+        orderStatus: "CANCELLED",
+        paymentStatus: "PENDING",
+        cancelledAt: new Date()
+      });
+
+      const response = await request(app)
+        .post(`/api/v1/orders/${order._id.toString()}/cancel`)
+        .set("Authorization", `Bearer ${customerToken(userId)}`)
+        .expect(409);
+
+      expect(response.body.error.code).toBe("ORDER_NOT_CANCELLABLE");
+    });
+
+    it("rejects non-existent orderId with 404", async () => {
+      const userId = customerId();
+      const response = await request(app)
+        .post(`/api/v1/orders/${new Types.ObjectId().toString()}/cancel`)
+        .set("Authorization", `Bearer ${customerToken(userId)}`)
+        .expect(404);
+
+      expect(response.body.error.code).toBe("ORDER_NOT_FOUND");
+    });
+
+    it("rejects unauthenticated cancel request with 401", async () => {
+      const response = await request(app)
+        .post(`/api/v1/orders/${new Types.ObjectId().toString()}/cancel`)
+        .expect(401);
+
+      expect(response.body.error.code).toBe("AUTH_TOKEN_MISSING");
+    });
+  });
 });
+

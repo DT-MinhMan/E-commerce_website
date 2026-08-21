@@ -1,4 +1,4 @@
-import type { OrderStatus, PaymentStatus } from "../../database/enums.js";
+import type { OrderStatus, PaymentMethod, PaymentStatus } from "../../database/enums.js";
 import type { ProductImage } from "../catalog/product.model.js";
 
 export interface ShippingAddressInput {
@@ -14,6 +14,7 @@ export interface ShippingAddressInput {
 
 export interface CheckoutInput {
   shippingAddress: ShippingAddressInput;
+  paymentMethod?: PaymentMethod;
 }
 
 export interface OrderListQuery {
@@ -59,6 +60,7 @@ export interface OrderResponse {
   orderNumber: string;
   items: OrderItemResponse[];
   shippingAddress: ShippingAddressResponse;
+  paymentMethod: PaymentMethod;
   subtotalMinor: number;
   shippingFeeMinor: number;
   totalMinor: number;

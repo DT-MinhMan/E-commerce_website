@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../../common/errors/AppError.js";
 import { successResponse } from "../../common/utils/apiResponse.js";
-import { checkout, getAdminOrderById, getOrderById, listAdminOrders, listOrders, updateAdminOrderStatus } from "./order.service.js";
+import { cancelCustomerOrder, checkout, getAdminOrderById, getOrderById, listAdminOrders, listOrders, updateAdminOrderStatus } from "./order.service.js";
 import { parseAdminOrderListQuery, parseAdminOrderStatusUpdateInput, parseCheckoutInput, parseOrderIdParam, parseOrderListQuery } from "./order.validation.js";
 
 const currentUserId = (req: Request): string => {
@@ -38,6 +38,16 @@ export const getOrderByIdController = async (req: Request, res: Response, next: 
   }
 };
 
+export const cancelCustomerOrderController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = currentUserId(req);
+    const orderId = parseOrderIdParam(req.params.orderId);
+    res.status(200).json(successResponse({ order: await cancelCustomerOrder(userId, orderId) }));
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const listAdminOrdersController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const result = await listAdminOrders(parseAdminOrderListQuery(req.query));
@@ -66,3 +76,4 @@ export const updateAdminOrderStatusController = async (req: Request, res: Respon
     next(error);
   }
 };
+

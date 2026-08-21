@@ -1,9 +1,10 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { checkout, getOrderById, listOrders } from "../services/orderService.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { cancelOrder, checkout, getOrderById, listOrders } from "../services/orderService.js";
 import type { ApiError } from "../../../lib/apiClient.js";
 import { useAuthStore } from "../../auth/store/authStore.js";
 import type { CheckoutInput, Order, OrderListParams, OrderListResult } from "../types.js";
 import { cartKeys } from "../../cart/hooks/useCartQueries.js";
+
 
 export const orderKeys = {
   all: ["orders"] as const,
@@ -46,3 +47,16 @@ export const useCheckout = () => {
     }
   });
 };
+
+export const useCancelOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<Order, ApiError, string>({
+    mutationFn: cancelOrder,
+    onSuccess: (order) => {
+      queryClient.setQueryData(orderKeys.detail(order.id), order);
+      queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+    }
+  });
+};
+

@@ -1,12 +1,12 @@
-﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createCheckoutSession, getPaymentStatusByOrder } from "../services/paymentService.js";
 import type { ApiError } from "../../../lib/apiClient.js";
 import { useAuthStore } from "../../auth/store/authStore.js";
 import type { CheckoutSessionInput, CheckoutSessionResult, PaymentStatus } from "../types.js";
 import { orderKeys } from "../../orders/hooks/useOrderQueries.js";
 
-const terminalPaymentStatuses = new Set(["SUCCEEDED", "FAILED", "REFUNDED"]);
-const terminalOrderStatuses = new Set(["PAID", "CANCELLED", "COMPLETED", "REFUNDED", "PAYMENT_REVIEW"]);
+const terminalPaymentStatuses = new Set(["PAID", "SUCCEEDED", "FAILED", "REFUNDED"]);
+const terminalOrderStatuses = new Set(["COMPLETED", "CANCELLED", "RETURNED", "PAID", "REFUNDED", "PAYMENT_REVIEW"]);
 
 export const paymentKeys = {
   all: ["payments"] as const,

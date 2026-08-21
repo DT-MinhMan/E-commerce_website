@@ -1,26 +1,27 @@
 import { Link, useParams } from "react-router-dom";
 import { useAdminOrderDetailQuery, useUpdateAdminOrderStatus } from "../../admin/hooks/useAdminQueries.js";
 import type { OrderStatus } from "../../admin/types.js";
+import { translatePaymentMethod } from "../../orders/orderUtils.js";
 
 const statuses: { value: OrderStatus; label: string }[] = [
-  { value: "PENDING_PAYMENT", label: "Chờ thanh toán" },
-  { value: "PAID", label: "Đã thanh toán" },
+  { value: "PENDING", label: "Chờ xác nhận" },
   { value: "PROCESSING", label: "Đang xử lý" },
   { value: "SHIPPED", label: "Đang giao hàng" },
   { value: "COMPLETED", label: "Hoàn tất" },
   { value: "CANCELLED", label: "Đã hủy" },
-  { value: "REFUNDED", label: "Đã hoàn tiền" },
-  { value: "PAYMENT_REVIEW", label: "Kiểm tra thanh toán" }
+  { value: "RETURNED", label: "Đã hoàn trả" }
 ];
 
 const translateStatus = (status: string): string => {
   const map: Record<string, string> = {
+    PENDING: "Chờ xác nhận",
     PENDING_PAYMENT: "Chờ thanh toán",
     PAID: "Đã thanh toán",
     PROCESSING: "Đang xử lý",
     SHIPPED: "Đang giao hàng",
     COMPLETED: "Hoàn tất",
     CANCELLED: "Đã hủy",
+    RETURNED: "Đã hoàn trả",
     REFUNDED: "Đã hoàn tiền",
     PAYMENT_REVIEW: "Kiểm tra thanh toán"
   };
@@ -101,8 +102,14 @@ export const AdminOrderDetailView = () => {
             </div>
             <div className="meta-item">
               <span className="meta-label">Thanh toán:</span>
-              <span className={`status-pill ${order.paymentStatus === "PAID" ? "paid" : "pending"}`}>
+              <span className={`status-pill ${order.paymentStatus === "PAID" || order.paymentStatus === "SUCCEEDED" ? "paid" : order.paymentStatus === "FAILED" ? "cancelled" : "pending"}`}>
                 {order.paymentStatus}
+              </span>
+            </div>
+            <div className="meta-item">
+              <span className="meta-label">Phương thức:</span>
+              <span className="status-pill pending">
+                {translatePaymentMethod(order.paymentMethod)}
               </span>
             </div>
           </div>

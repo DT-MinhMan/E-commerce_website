@@ -69,7 +69,8 @@ export const CheckoutPageView = () => {
         shippingAddress: {
           ...shippingAddress,
           countryCode: shippingAddress.countryCode.toUpperCase()
-        }
+        },
+        paymentMethod: paymentMethod.toUpperCase() as "COD" | "CARD"
       },
       {
         onSuccess: (order) => {

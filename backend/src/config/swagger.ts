@@ -214,6 +214,22 @@ export const swaggerSpec = (config: AppConfig) => ({
         }
       }
     },
+    "/api/v1/orders/{orderId}/cancel": {
+      post: {
+        summary: "Cancel an unpaid or pending customer order",
+        tags: ["Orders"],
+        security: bearerSecurity,
+        parameters: [{ name: "orderId", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "Cancelled customer order", content: { "application/json": { schema: { $ref: "#/components/schemas/OrderSuccessResponse" } } } },
+          "401": { description: "Missing or invalid access token", ...errorResponse },
+          "403": { description: "Customer role required", ...errorResponse },
+          "404": { description: "Order not found", ...errorResponse },
+          "409": { description: "Order cannot be cancelled at this stage", ...errorResponse }
+        }
+      }
+    },
+
     "/api/v1/payments/checkout-session": {
       post: {
         summary: "Create a Stripe hosted Checkout Session for a payable order",
@@ -770,8 +786,9 @@ export const swaggerSpec = (config: AppConfig) => ({
           shippingFeeMinor: { type: "integer", example: 0 },
           totalMinor: { type: "integer", example: 17998 },
           currency: { type: "string", example: "USD" },
-          orderStatus: { type: "string", enum: ["PENDING_PAYMENT", "PAID", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "REFUNDED", "PAYMENT_REVIEW"] },
-          paymentStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REFUNDED"] },
+          orderStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "RETURNED"] },
+          paymentStatus: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"] },
+          paymentMethod: { type: "string", enum: ["COD", "CARD"] },
           paidAt: { type: "string", format: "date-time", nullable: true },
           cancelledAt: { type: "string", format: "date-time", nullable: true },
           completedAt: { type: "string", format: "date-time", nullable: true },
@@ -793,10 +810,10 @@ export const swaggerSpec = (config: AppConfig) => ({
             type: "object",
             properties: {
               orderId: { type: "string" },
-              status: { type: "string", enum: ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REFUNDED"] },
+              status: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"] },
               amountMinor: { type: "integer", example: 17998 },
               currency: { type: "string", example: "USD" },
-              provider: { type: "string", enum: ["STRIPE"] },
+              provider: { type: "string", enum: ["STRIPE", "COD"] },
               providerCheckoutSessionId: { type: "string", nullable: true, example: "cs_test_123" },
               providerPaymentId: { type: "string", nullable: true, example: "pi_test_123" },
               paidAt: { type: "string", format: "date-time", nullable: true },
@@ -808,8 +825,8 @@ export const swaggerSpec = (config: AppConfig) => ({
             type: "object",
             properties: {
               id: { type: "string" },
-              orderStatus: { type: "string", enum: ["PENDING_PAYMENT", "PAID", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "REFUNDED", "PAYMENT_REVIEW"] },
-              paymentStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REFUNDED"] },
+              orderStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "RETURNED"] },
+              paymentStatus: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"] },
               paidAt: { type: "string", format: "date-time", nullable: true }
             }
           }

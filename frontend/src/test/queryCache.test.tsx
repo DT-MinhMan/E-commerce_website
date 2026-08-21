@@ -1,4 +1,4 @@
-﻿import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,12 +45,13 @@ const testOrder = (overrides: Partial<Order> = {}): Order => ({
     postalCode: "12345",
     countryCode: "US"
   },
+  paymentMethod: "COD",
   subtotalMinor: 1000,
   shippingFeeMinor: 0,
   totalMinor: 1000,
   currency: "USD",
   orderStatus: "PROCESSING",
-  paymentStatus: "SUCCEEDED",
+  paymentStatus: "PAID",
   paidAt: "2026-08-01T00:00:00.000Z",
   cancelledAt: null,
   completedAt: null,
@@ -107,7 +108,7 @@ describe("query cache behavior", () => {
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useUpdateAdminOrderStatus(order.id), { wrapper: Wrapper });
 
-    result.current.mutate({ expectedCurrentStatus: "PAID", nextStatus: "PROCESSING" });
+    result.current.mutate({ expectedCurrentStatus: "PENDING", nextStatus: "PROCESSING" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(queryClient.getQueryData(adminOrderKeys.detail(order.id))).toEqual(order);
@@ -122,7 +123,7 @@ describe("query cache behavior", () => {
       isPaymentPollingTerminal({
         payment: {
           orderId: "order-1",
-          status: "SUCCEEDED",
+          status: "PAID",
           amountMinor: 1000,
           currency: "USD",
           provider: "STRIPE",
@@ -134,8 +135,8 @@ describe("query cache behavior", () => {
         },
         order: {
           id: "order-1",
-          orderStatus: "PAID",
-          paymentStatus: "SUCCEEDED",
+          orderStatus: "COMPLETED",
+          paymentStatus: "PAID",
           paidAt: "2026-08-01T00:00:00.000Z"
         }
       })
@@ -157,7 +158,7 @@ describe("query cache behavior", () => {
         },
         order: {
           id: "order-2",
-          orderStatus: "PENDING_PAYMENT",
+          orderStatus: "PENDING",
           paymentStatus: "PENDING",
           paidAt: null
         }

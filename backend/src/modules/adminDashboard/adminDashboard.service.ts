@@ -39,7 +39,7 @@ interface AdminDashboardSummary {
 export const getAdminDashboardSummary = async (): Promise<AdminDashboardSummary> => {
   const [revenueResult, totalOrders, statusCounts, lowStockProducts, topProducts] = await Promise.all([
     PaymentModel.aggregate<{ _id: string; totalMinor: number }>([
-      { $match: { status: "SUCCEEDED" } },
+      { $match: { status: "PAID" } },
       { $group: { _id: "$currency", totalMinor: { $sum: "$amountMinor" } } },
       { $sort: { totalMinor: -1 } },
       { $limit: 1 }
@@ -56,7 +56,7 @@ export const getAdminDashboardSummary = async (): Promise<AdminDashboardSummary>
       .lean<Array<{ _id: { toString: () => string }; name: string; slug: string; stockQuantity: number; status: string }>>()
       .exec(),
     OrderModel.aggregate<TopProduct>([
-      { $match: { paymentStatus: "SUCCEEDED", orderStatus: { $in: ["PAID", "PROCESSING", "SHIPPED", "COMPLETED"] } } },
+      { $match: { paymentStatus: "PAID", orderStatus: { $in: ["PROCESSING", "SHIPPED", "COMPLETED"] } } },
       { $unwind: "$items" },
       {
         $group: {

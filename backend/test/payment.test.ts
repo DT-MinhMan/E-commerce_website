@@ -98,7 +98,7 @@ const orderInput = (
   shippingFeeMinor: 0,
   totalMinor: overrides.totalMinor ?? 5000,
   currency: overrides.currency ?? "USD",
-  orderStatus: overrides.orderStatus ?? "PENDING_PAYMENT",
+  orderStatus: overrides.orderStatus ?? "PENDING",
   paymentStatus: overrides.paymentStatus ?? "PENDING"
 });
 
@@ -238,7 +238,7 @@ describe("payments API", () => {
       .send({ orderId: order._id.toString() })
       .expect(404);
 
-    const paidOrder = await seedOrderAndPayment(objectId(), { orderStatus: "PAID", paymentStatus: "SUCCEEDED", paymentStatusOnly: "SUCCEEDED" });
+    const paidOrder = await seedOrderAndPayment(objectId(), { orderStatus: "PROCESSING", paymentStatus: "PAID", paymentStatusOnly: "PAID" });
     const paidResponse = await request(app)
       .post("/api/v1/payments/checkout-session")
       .set("Authorization", `Bearer ${customerToken(paidOrder.userId)}`)
@@ -277,7 +277,7 @@ describe("payments API", () => {
       },
       order: {
         id: order._id.toString(),
-        orderStatus: "PENDING_PAYMENT",
+        orderStatus: "PENDING",
         paymentStatus: "PENDING",
         paidAt: null
       }
@@ -315,9 +315,9 @@ describe("payments API", () => {
     const firstPayment = await PaymentModel.findById(payment._id).lean().exec();
     const firstOrder = await OrderModel.findById(order._id).lean().exec();
 
-    expect(firstPayment).toMatchObject({ status: "SUCCEEDED", providerCheckoutSessionId: "cs_test_123", providerPaymentId: "pi_success" });
+    expect(firstPayment).toMatchObject({ status: "PAID", providerCheckoutSessionId: "cs_test_123", providerPaymentId: "pi_success" });
     expect(firstPayment?.paidAt).toBeInstanceOf(Date);
-    expect(firstOrder).toMatchObject({ orderStatus: "PAID", paymentStatus: "SUCCEEDED" });
+    expect(firstOrder).toMatchObject({ orderStatus: "PENDING", paymentStatus: "PAID" });
     expect(firstOrder?.paidAt).toBeInstanceOf(Date);
     expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(4);
     expect((await PaymentWebhookEventModel.findOne({ providerEventId: "evt_success" }).lean().exec())?.processingStatus).toBe("PROCESSED");
@@ -356,8 +356,8 @@ describe("payments API", () => {
 
     expect(responses.map((response) => response.status).sort()).toEqual([200, 200]);
     const orders = await OrderModel.find({ _id: { $in: [first.order._id, second.order._id] } }).lean().exec();
-    expect(orders.map((order) => order.orderStatus).sort()).toEqual(["PAID", "PAYMENT_REVIEW"]);
-    expect(orders.every((order) => order.paymentStatus === "SUCCEEDED")).toBe(true);
+    expect(orders.map((order) => order.orderStatus).sort()).toEqual(["PENDING", "PENDING"]);
+    expect(orders.every((order) => order.paymentStatus === "PAID")).toBe(true);
     expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(0);
   });
 
@@ -405,19 +405,19 @@ describe("payments API", () => {
     await request(app).post("/api/v1/webhooks/stripe").set("Stripe-Signature", "valid").set("Content-Type", "application/json").send({}).expect(200);
 
     expect(await PaymentModel.findById(payment._id).lean().exec()).toMatchObject({
-      status: "SUCCEEDED",
+      status: "PAID",
       failureCode: "PAYMENT_REVIEW_REQUIRED"
     });
     expect(await OrderModel.findById(order._id).lean().exec()).toMatchObject({
-      orderStatus: "PAYMENT_REVIEW",
-      paymentStatus: "SUCCEEDED"
+      orderStatus: "PENDING",
+      paymentStatus: "PAID"
     });
     expect((await ProductModel.findById(availableProduct._id).lean().exec())?.stockQuantity).toBe(2);
     expect((await ProductModel.findById(missingProduct._id).lean().exec())?.stockQuantity).toBe(0);
   });
 
   it("does not downgrade success when a stale failure arrives later", async () => {
-    const { order, payment } = await seedOrderAndPayment(objectId(), { orderStatus: "PAID", paymentStatus: "SUCCEEDED", paymentStatusOnly: "SUCCEEDED" });
+    const { order, payment } = await seedOrderAndPayment(objectId(), { orderStatus: "PROCESSING", paymentStatus: "PAID", paymentStatusOnly: "PAID" });
     await OrderModel.updateOne({ _id: order._id }, { $set: { paidAt: new Date() } }).exec();
     await PaymentModel.updateOne({ _id: payment._id }, { $set: { paidAt: new Date(), providerPaymentId: "pi_success" } }).exec();
     mockedConstructStripeWebhookEvent.mockReturnValue(
@@ -430,8 +430,8 @@ describe("payments API", () => {
 
     await request(app).post("/api/v1/webhooks/stripe").set("Stripe-Signature", "valid").set("Content-Type", "application/json").send({}).expect(200);
 
-    expect((await PaymentModel.findById(payment._id).lean().exec())?.status).toBe("SUCCEEDED");
-    expect((await OrderModel.findById(order._id).lean().exec())?.paymentStatus).toBe("SUCCEEDED");
+    expect((await PaymentModel.findById(payment._id).lean().exec())?.status).toBe("PAID");
+    expect((await OrderModel.findById(order._id).lean().exec())?.paymentStatus).toBe("PAID");
   });
 
   it("moves amount mismatch success events to review without decrementing stock", async () => {
@@ -448,12 +448,12 @@ describe("payments API", () => {
     await request(app).post("/api/v1/webhooks/stripe").set("Stripe-Signature", "valid").set("Content-Type", "application/json").send({}).expect(200);
 
     expect(await PaymentModel.findById(payment._id).lean().exec()).toMatchObject({
-      status: "SUCCEEDED",
+      status: "PAID",
       failureCode: "PAYMENT_REVIEW_REQUIRED"
     });
     expect(await OrderModel.findById(order._id).lean().exec()).toMatchObject({
-      orderStatus: "PAYMENT_REVIEW",
-      paymentStatus: "SUCCEEDED"
+      orderStatus: "PENDING",
+      paymentStatus: "PAID"
     });
     expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(3);
     expect((await PaymentWebhookEventModel.findOne({ providerEventId: "evt_mismatch" }).lean().exec())?.processingStatus).toBe("PROCESSED");
@@ -474,12 +474,12 @@ describe("payments API", () => {
     await request(app).post("/api/v1/webhooks/stripe").set("Stripe-Signature", "valid").set("Content-Type", "application/json").send({}).expect(200);
 
     expect(await PaymentModel.findById(payment._id).lean().exec()).toMatchObject({
-      status: "SUCCEEDED",
+      status: "PAID",
       failureCode: "PAYMENT_REVIEW_REQUIRED"
     });
     expect(await OrderModel.findById(order._id).lean().exec()).toMatchObject({
-      orderStatus: "PAYMENT_REVIEW",
-      paymentStatus: "SUCCEEDED"
+      orderStatus: "PENDING",
+      paymentStatus: "PAID"
     });
     expect((await ProductModel.findById(product._id).lean().exec())?.stockQuantity).toBe(3);
   });

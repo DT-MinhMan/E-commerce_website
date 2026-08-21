@@ -24,7 +24,7 @@ type OrderRecord = Order & {
 const cartSelect = "_id userId items";
 const productSelect = "_id name slug priceMinor currency stockQuantity images status";
 const orderSelect =
-  "_id userId orderNumber items shippingAddress subtotalMinor shippingFeeMinor totalMinor currency orderStatus paymentStatus paidAt cancelledAt completedAt createdAt updatedAt";
+  "_id userId orderNumber items shippingAddress paymentMethod subtotalMinor shippingFeeMinor totalMinor currency orderStatus paymentStatus paidAt cancelledAt completedAt createdAt updatedAt";
 const orderNumberRetryLimit = 3;
 const shippingFeeMinor = 0;
 
@@ -142,6 +142,7 @@ const toOrderResponse = (order: OrderRecord | OrderDocument): OrderResponse => (
     postalCode: order.shippingAddress.postalCode,
     countryCode: order.shippingAddress.countryCode
   },
+  paymentMethod: order.paymentMethod ?? "COD",
   subtotalMinor: order.subtotalMinor,
   shippingFeeMinor: order.shippingFeeMinor,
   totalMinor: order.totalMinor,
@@ -159,6 +160,7 @@ export const checkout = async (userId: string, input: CheckoutInput, logContext:
   const cart = await getCart(userId);
   const snapshot = await buildCheckoutSnapshot(cart);
   const config = getConfig();
+  const paymentMethod = input.paymentMethod ?? "COD";
 
   for (let attempt = 1; attempt <= orderNumberRetryLimit; attempt += 1) {
     const session = await mongoose.startSession();
@@ -175,11 +177,12 @@ export const checkout = async (userId: string, input: CheckoutInput, logContext:
               userId: new Types.ObjectId(userId),
               items: snapshot.items,
               shippingAddress: input.shippingAddress,
+              paymentMethod,
               subtotalMinor: snapshot.subtotalMinor,
               shippingFeeMinor,
               totalMinor: snapshot.totalMinor,
               currency: snapshot.currency,
-              orderStatus: "PENDING_PAYMENT",
+              orderStatus: "PENDING",
               paymentStatus: "PENDING"
             }
           ],
@@ -193,7 +196,7 @@ export const checkout = async (userId: string, input: CheckoutInput, logContext:
             {
               orderId: order._id,
               userId: new Types.ObjectId(userId),
-              provider: "STRIPE",
+              provider: paymentMethod === "COD" ? "COD" : "STRIPE",
               amountMinor: snapshot.totalMinor,
               currency: snapshot.currency,
               status: "PENDING"
@@ -332,10 +335,9 @@ export const getAdminOrderById = async (orderId: string): Promise<OrderResponse>
 };
 
 const validAdminTransitions: Partial<Record<Order["orderStatus"], Order["orderStatus"][]>> = {
-  PENDING_PAYMENT: ["CANCELLED"],
-  PAID: ["PROCESSING"],
-  PROCESSING: ["SHIPPED"],
-  SHIPPED: ["COMPLETED"]
+  PENDING: ["PROCESSING", "CANCELLED"],
+  PROCESSING: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["COMPLETED", "RETURNED"]
 };
 
 export const updateAdminOrderStatus = async (orderId: string, input: AdminOrderStatusUpdateInput): Promise<OrderResponse> => {
@@ -374,3 +376,35 @@ export const updateAdminOrderStatus = async (orderId: string, input: AdminOrderS
 
   return toOrderResponse(order);
 };
+
+export const cancelCustomerOrder = async (userId: string, orderId: string): Promise<OrderResponse> => {
+  if (!Types.ObjectId.isValid(orderId)) {
+    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found");
+  }
+
+  const current = await OrderModel.findOne({ _id: orderId, userId }).select(orderSelect).lean<OrderRecord>().exec();
+
+  if (!current) {
+    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found");
+  }
+
+  if (current.orderStatus !== "PENDING" || current.paymentStatus === "PAID") {
+    throw new AppError(409, "ORDER_NOT_CANCELLABLE", "Order cannot be cancelled at this stage");
+  }
+
+  const order = await OrderModel.findByIdAndUpdate(
+    orderId,
+    { $set: { orderStatus: "CANCELLED", cancelledAt: new Date() } },
+    { new: true, runValidators: true }
+  )
+    .select(orderSelect)
+    .lean<OrderRecord>()
+    .exec();
+
+  if (!order) {
+    throw new AppError(404, "ORDER_NOT_FOUND", "Order not found");
+  }
+
+  return toOrderResponse(order);
+};
+

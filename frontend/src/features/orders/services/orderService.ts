@@ -1,4 +1,4 @@
-﻿import { apiClient } from "../../../lib/apiClient.js";
+import { apiClient } from "../../../lib/apiClient.js";
 import type { CheckoutInput, Order, OrderListParams, OrderListResult } from "../types.js";
 
 interface OrderResponse {
@@ -34,3 +34,9 @@ export const getOrderById = async (orderId: string, signal?: AbortSignal): Promi
   const response = await apiClient.get<OrderResponse>(`/orders/${orderId}`, { signal });
   return response.data.data.order;
 };
+
+export const cancelOrder = async (orderId: string): Promise<Order> => {
+  const response = await apiClient.post<OrderResponse>(`/orders/${orderId}/cancel`);
+  return response.data.data.order;
+};
+

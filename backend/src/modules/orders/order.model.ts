@@ -1,5 +1,5 @@
 import { Schema, model, type HydratedDocument, type Types } from "mongoose";
-import { DEFAULT_CURRENCY, ORDER_STATUSES, PAYMENT_STATUSES, type OrderStatus, type PaymentStatus } from "../../database/enums.js";
+import { DEFAULT_CURRENCY, ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES, type OrderStatus, type PaymentMethod, type PaymentStatus } from "../../database/enums.js";
 import { isCurrencyCode, isNonNegativeInteger, isPositiveInteger } from "../../database/validators.js";
 
 export interface OrderItem {
@@ -28,6 +28,7 @@ export interface Order {
   userId: Types.ObjectId;
   items: OrderItem[];
   shippingAddress: ShippingAddress;
+  paymentMethod: PaymentMethod;
   subtotalMinor: number;
   shippingFeeMinor: number;
   totalMinor: number;
@@ -168,6 +169,12 @@ const orderSchema = new Schema<Order>(
       type: shippingAddressSchema,
       required: true
     },
+    paymentMethod: {
+      type: String,
+      enum: PAYMENT_METHODS,
+      required: true,
+      default: "COD"
+    },
     subtotalMinor: {
       type: Number,
       required: true,
@@ -194,7 +201,7 @@ const orderSchema = new Schema<Order>(
       type: String,
       enum: ORDER_STATUSES,
       required: true,
-      default: "PENDING_PAYMENT"
+      default: "PENDING"
     },
     paymentStatus: {
       type: String,

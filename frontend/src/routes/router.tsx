@@ -4,7 +4,6 @@ import { AccountPage } from "../pages/account/AccountPage.js";
 import { LoginPage } from "../pages/account/LoginPage.js";
 import { OrderDetailPage } from "../pages/account/OrderDetailPage.js";
 import { OrderHistoryPage } from "../pages/account/OrderHistoryPage.js";
-import { PayOrderPage } from "../pages/account/PayOrderPage.js";
 import { PaymentCancelPage } from "../pages/account/PaymentCancelPage.js";
 import { PaymentSuccessPage } from "../pages/account/PaymentSuccessPage.js";
 import { RegisterPage } from "../pages/account/RegisterPage.js";
@@ -80,10 +79,6 @@ export const router = createBrowserRouter([
           {
             path: "orders/:orderId",
             element: <OrderDetailPage />
-          },
-          {
-            path: "orders/:orderId/pay",
-            element: <PayOrderPage />
           },
           {
             path: "payment/success",

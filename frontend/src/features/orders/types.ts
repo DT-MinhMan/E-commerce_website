@@ -1,4 +1,4 @@
-﻿import type { ProductImage } from "../catalog/types.js";
+import type { ProductImage } from "../catalog/types.js";
 
 export interface ShippingAddressInput {
   recipientName: string;
@@ -13,6 +13,7 @@ export interface ShippingAddressInput {
 
 export interface CheckoutInput {
   shippingAddress: ShippingAddressInput;
+  paymentMethod?: "COD" | "CARD";
 }
 
 export interface OrderItem {
@@ -30,6 +31,7 @@ export interface Order {
   orderNumber: string;
   items: OrderItem[];
   shippingAddress: ShippingAddressInput;
+  paymentMethod: string;
   subtotalMinor: number;
   shippingFeeMinor: number;
   totalMinor: number;

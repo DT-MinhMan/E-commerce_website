@@ -89,7 +89,7 @@ const markPaymentReview = async (
     { _id: paymentId },
     {
       $set: {
-        status: "SUCCEEDED",
+        status: "PAID",
         providerCheckoutSessionId,
         providerPaymentId,
         paidAt,
@@ -101,7 +101,7 @@ const markPaymentReview = async (
   ).exec();
   await OrderModel.updateOne(
     { _id: orderId },
-    { $set: { orderStatus: "PAYMENT_REVIEW", paymentStatus: "SUCCEEDED", paidAt } },
+    { $set: { paymentStatus: "PAID", paidAt } },
     { runValidators: true, session: dbSession }
   ).exec();
 };
@@ -230,7 +230,7 @@ const markSuccess = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
     return "PROCESSED";
   }
 
-  if (payment.status === "SUCCEEDED" && order.paymentStatus === "SUCCEEDED") {
+  if (payment.status === "PAID" && order.paymentStatus === "PAID") {
     logger.info(config, "Stripe success webhook already finalized", {
       orderId: ids.orderId.toString(),
       paymentId: ids.paymentId.toString(),
@@ -262,10 +262,10 @@ const markSuccess = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
   await decrementStock(order.items, dbSession);
 
   await PaymentModel.updateOne(
-    { _id: ids.paymentId, status: { $ne: "SUCCEEDED" } },
+    { _id: ids.paymentId, status: { $ne: "PAID" } },
     {
       $set: {
-        status: "SUCCEEDED",
+        status: "PAID",
         providerCheckoutSessionId: details.providerCheckoutSessionId,
         providerPaymentId: details.providerPaymentId,
         paidAt
@@ -279,11 +279,10 @@ const markSuccess = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
   ).exec();
 
   await OrderModel.updateOne(
-    { _id: ids.orderId, paymentStatus: { $ne: "SUCCEEDED" } },
+    { _id: ids.orderId, paymentStatus: { $ne: "PAID" } },
     {
       $set: {
-        orderStatus: order.orderStatus === "PENDING_PAYMENT" ? "PAID" : order.orderStatus,
-        paymentStatus: "SUCCEEDED",
+        paymentStatus: "PAID",
         paidAt
       }
     },
@@ -316,7 +315,7 @@ const markFailure = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
     throw new AppError(404, "PAYMENT_NOT_FOUND", "Payment not found");
   }
 
-  if (payment.status === "SUCCEEDED") {
+  if (payment.status === "PAID") {
     logger.info(config, "Stripe failure webhook ignored for succeeded payment", {
       orderId: ids.orderId.toString(),
       paymentId: ids.paymentId.toString(),
@@ -326,7 +325,7 @@ const markFailure = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
   }
 
   await PaymentModel.updateOne(
-    { _id: ids.paymentId, status: { $ne: "SUCCEEDED" } },
+    { _id: ids.paymentId, status: { $ne: "PAID" } },
     {
       $set: {
         status: "FAILED",
@@ -339,7 +338,7 @@ const markFailure = async (event: Stripe.Event, dbSession: mongoose.ClientSessio
   ).exec();
 
   await OrderModel.updateOne(
-    { _id: ids.orderId, paymentStatus: { $ne: "SUCCEEDED" } },
+    { _id: ids.orderId, paymentStatus: { $ne: "PAID" } },
     { $set: { paymentStatus: "FAILED" } },
     { runValidators: true, session: dbSession }
   ).exec();

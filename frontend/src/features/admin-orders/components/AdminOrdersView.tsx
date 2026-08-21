@@ -16,12 +16,14 @@ const getStatusPillClass = (status: string): string => {
 
 const translateStatus = (status: string): string => {
   const map: Record<string, string> = {
+    PENDING: "Chờ xác nhận",
     PENDING_PAYMENT: "Chờ thanh toán",
     PAID: "Đã thanh toán",
     PROCESSING: "Đang xử lý",
     SHIPPED: "Đang giao hàng",
     COMPLETED: "Hoàn tất",
     CANCELLED: "Đã hủy",
+    RETURNED: "Đã hoàn trả",
     REFUNDED: "Đã hoàn tiền",
     PAYMENT_REVIEW: "Kiểm tra thanh toán"
   };
@@ -33,7 +35,7 @@ const translatePaymentStatus = (status: string): string => {
     PENDING: "Chờ thanh toán",
     PROCESSING: "Đang xử lý",
     PAID: "Đã thanh toán",
-    SUCCEEDED: "Thành công",
+    SUCCEEDED: "Đã thanh toán",
     FAILED: "Thất bại",
     CANCELLED: "Đã hủy",
     REFUNDED: "Đã hoàn tiền"
@@ -43,12 +45,12 @@ const translatePaymentStatus = (status: string): string => {
 
 const ORDER_STATUS_TABS: Array<{ value: OrderStatus | ""; label: string }> = [
   { value: "", label: "Tất cả" },
-  { value: "PENDING_PAYMENT", label: "Chờ thanh toán" },
+  { value: "PENDING", label: "Chờ xác nhận" },
   { value: "PROCESSING", label: "Đang xử lý" },
   { value: "SHIPPED", label: "Đang giao hàng" },
   { value: "COMPLETED", label: "Hoàn tất" },
   { value: "CANCELLED", label: "Đã hủy" },
-  { value: "REFUNDED", label: "Đã hoàn tiền" }
+  { value: "RETURNED", label: "Đã hoàn trả" }
 ];
 
 const paramsFromSearch = (searchParams: URLSearchParams): AdminOrderListParams => ({
@@ -252,7 +254,7 @@ export const AdminOrdersView = () => {
                   </div>
 
                   <div>
-                    <span className={`status-pill ${order.paymentStatus === "PAID" ? "paid" : "pending"}`}>
+                    <span className={`status-pill ${order.paymentStatus === "PAID" || order.paymentStatus === "SUCCEEDED" ? "paid" : order.paymentStatus === "FAILED" ? "cancelled" : "pending"}`}>
                       {translatePaymentStatus(order.paymentStatus)}
                     </span>
                   </div>

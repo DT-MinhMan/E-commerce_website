@@ -36,10 +36,10 @@ export interface PaymentStatusResponse {
   };
 }
 
-const orderSelect = "_id userId items totalMinor currency orderStatus paymentStatus paidAt";
+const orderSelect = "_id userId items totalMinor currency paymentMethod orderStatus paymentStatus paidAt";
 const paymentSelect =
   "_id orderId userId provider providerPaymentId providerCheckoutSessionId amountMinor currency status failureCode failureMessage paidAt";
-const payableOrderStatuses = new Set<Order["orderStatus"]>(["PENDING_PAYMENT"]);
+const payableOrderStatuses = new Set<Order["orderStatus"]>(["PENDING", "PROCESSING"]);
 const payablePaymentStatuses = new Set<Payment["status"]>(["PENDING", "FAILED"]);
 
 const requireStripeUrl = (template: string | undefined, orderId: string): string => {
@@ -112,12 +112,15 @@ export const createCheckoutSession = async (
   logContext: LogFields = {}
 ): Promise<CheckoutSessionResponse> => {
   const order = await findOwnedOrder(userId, orderId);
+  const payment = await findPaymentForOrder(userId, orderId);
+
+  if (payment.provider === "COD") {
+    throw new AppError(409, "ORDER_NOT_PAYABLE", "COD orders cannot be paid online");
+  }
 
   if (!payableOrderStatuses.has(order.orderStatus) || !payablePaymentStatuses.has(order.paymentStatus)) {
     throw new AppError(409, "ORDER_NOT_PAYABLE", "Order is not payable");
   }
-
-  const payment = await findPaymentForOrder(userId, orderId);
 
   if (!payablePaymentStatuses.has(payment.status)) {
     throw new AppError(409, "PAYMENT_NOT_PAYABLE", "Payment is not payable");

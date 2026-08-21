@@ -3,15 +3,13 @@ import type { Order } from "../orders/types.js";
 
 export type ProductStockState = "in_stock" | "low_stock" | "out_of_stock";
 export type OrderStatus =
-  | "PENDING_PAYMENT"
-  | "PAID"
+  | "PENDING"
   | "PROCESSING"
   | "SHIPPED"
   | "COMPLETED"
   | "CANCELLED"
-  | "REFUNDED"
-  | "PAYMENT_REVIEW";
-export type PaymentStatus = "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "REFUNDED";
+  | "RETURNED";
+export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
 export interface AdminProductListParams {
   page: number;

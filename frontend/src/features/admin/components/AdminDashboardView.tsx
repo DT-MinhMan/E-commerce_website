@@ -20,12 +20,14 @@ const getStatusPillClass = (status: string): string => {
 
 const translateStatus = (status: string): string => {
   const map: Record<string, string> = {
+    PENDING: "Chờ xác nhận",
     PENDING_PAYMENT: "Chờ thanh toán",
     PAID: "Đã thanh toán",
     PROCESSING: "Đang xử lý",
     SHIPPED: "Đang giao hàng",
     COMPLETED: "Hoàn tất",
     CANCELLED: "Đã hủy",
+    RETURNED: "Đã hoàn trả",
     REFUNDED: "Đã hoàn tiền",
     PAYMENT_REVIEW: "Kiểm tra thanh toán"
   };
