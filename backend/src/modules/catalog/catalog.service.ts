@@ -115,8 +115,6 @@ const categorySelect = "_id name slug description imageUrl status createdAt upda
 const productSelect = "_id name slug description categoryId roomType priceMinor currency stockQuantity images status createdAt updatedAt";
 const lowStockThreshold = 5;
 
-const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
 const getProductSort = (sort: ProductListQuery["sort"]): Record<string, SortOrder> => {
   if (sort === "price_asc") {
     return { priceMinor: 1, createdAt: -1 };

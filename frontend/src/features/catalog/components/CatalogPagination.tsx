@@ -6,7 +6,7 @@ interface CatalogPaginationProps {
   onUpdateFilters: (updates: Record<string, string | undefined>, resetPage?: boolean) => void;
 }
 
-export const CatalogPagination = ({ meta, params, onUpdateFilters }: CatalogPaginationProps) => (
+export const CatalogPagination = ({ meta, onUpdateFilters }: CatalogPaginationProps) => (
   <>
     <div className="catalog-results-meta">
       <p>Showing {meta.totalItems} {meta.totalItems === 1 ? "product" : "products"}</p>
