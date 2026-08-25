@@ -259,7 +259,12 @@ export const loginWithGoogle = async (
       if (!response.ok) {
         throw new AppError(401, "AUTH_GOOGLE_INVALID", "Google authentication failed or token is invalid");
       }
-      const data = await response.json() as any;
+      const data = (await response.json()) as {
+        email?: string;
+        email_verified?: boolean | string;
+        name?: string;
+        sub?: string;
+      };
       payload = {
         email: data.email,
         email_verified: data.email_verified === true || data.email_verified === "true",

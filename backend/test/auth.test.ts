@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import jwt from "jsonwebtoken";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
