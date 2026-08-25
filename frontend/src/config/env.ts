@@ -1,5 +1,6 @@
 interface FrontendConfig {
   apiBaseUrl: string;
+  googleClientId?: string;
 }
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -9,5 +10,6 @@ if (!apiBaseUrl) {
 }
 
 export const config: FrontendConfig = {
-  apiBaseUrl
+  apiBaseUrl,
+  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || undefined
 };

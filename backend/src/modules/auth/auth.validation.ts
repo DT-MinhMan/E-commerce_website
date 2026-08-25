@@ -1,7 +1,8 @@
 import { AppError } from "../../common/errors/AppError.js";
-import type { LoginInput, RegisterInput } from "./auth.types.js";
+import type { GoogleLoginInput, LoginInput, RegisterInput, ResendOtpInput, VerifyEmailInput } from "./auth.types.js";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const OTP_PATTERN = /^\d{6}$/;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -42,6 +43,49 @@ export const parseRegisterInput = (body: unknown): RegisterInput => {
   assertPassword(password);
 
   return { email, password, fullName };
+};
+
+export const parseVerifyEmailInput = (body: unknown): VerifyEmailInput => {
+  if (!isRecord(body)) {
+    throw new AppError(400, "VALIDATION_ERROR", "Request body must be an object");
+  }
+
+  const email = requiredString(body, "email").toLowerCase();
+  const code = requiredString(body, "code");
+
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new AppError(400, "VALIDATION_ERROR", "Email must be valid");
+  }
+
+  if (!OTP_PATTERN.test(code)) {
+    throw new AppError(400, "VALIDATION_ERROR", "Verification code must be 6 digits");
+  }
+
+  return { email, code };
+};
+
+export const parseResendOtpInput = (body: unknown): ResendOtpInput => {
+  if (!isRecord(body)) {
+    throw new AppError(400, "VALIDATION_ERROR", "Request body must be an object");
+  }
+
+  const email = requiredString(body, "email").toLowerCase();
+
+  if (!EMAIL_PATTERN.test(email)) {
+    throw new AppError(400, "VALIDATION_ERROR", "Email must be valid");
+  }
+
+  return { email };
+};
+
+export const parseGoogleLoginInput = (body: unknown): GoogleLoginInput => {
+  if (!isRecord(body)) {
+    throw new AppError(400, "VALIDATION_ERROR", "Request body must be an object");
+  }
+
+  const idToken = requiredString(body, "idToken");
+
+  return { idToken };
 };
 
 export const parseLoginInput = (body: unknown): LoginInput => {

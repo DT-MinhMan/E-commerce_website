@@ -1,9 +1,15 @@
 import type { Request, Response, NextFunction } from "express";
 import { getConfig } from "../../config/env.js";
 import { successResponse } from "../../common/utils/apiResponse.js";
-import { parseLoginInput, parseRegisterInput } from "./auth.validation.js";
+import {
+  parseGoogleLoginInput,
+  parseLoginInput,
+  parseRegisterInput,
+  parseResendOtpInput,
+  parseVerifyEmailInput
+} from "./auth.validation.js";
 import { REFRESH_TOKEN_COOKIE_NAME, getRefreshCookieOptions } from "./tokens.js";
-import { login, logout, refresh, register } from "./auth.service.js";
+import { login, loginWithGoogle, logout, refresh, register, resendOtp, verifyEmail } from "./auth.service.js";
 
 const getRequestContext = (req: Request) => ({
   userAgent: req.get("user-agent"),
@@ -21,8 +27,36 @@ const clearRefreshCookie = (res: Response): void => {
 export const registerController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const result = await register(parseRegisterInput(req.body), getRequestContext(req));
+    res.status(201).json(successResponse(result));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyEmailController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await verifyEmail(parseVerifyEmailInput(req.body), getRequestContext(req));
     setRefreshCookie(res, result.refreshToken, result.refreshTokenExpiresAt);
-    res.status(201).json(successResponse({ user: result.user, accessToken: result.accessToken }));
+    res.status(200).json(successResponse({ user: result.user, accessToken: result.accessToken }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendOtpController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await resendOtp(parseResendOtpInput(req.body));
+    res.status(200).json(successResponse(result));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const googleLoginController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await loginWithGoogle(parseGoogleLoginInput(req.body), getRequestContext(req));
+    setRefreshCookie(res, result.refreshToken, result.refreshTokenExpiresAt);
+    res.status(200).json(successResponse({ user: result.user, accessToken: result.accessToken }));
   } catch (error) {
     next(error);
   }

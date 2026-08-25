@@ -15,7 +15,8 @@ const setUser = (role: "CUSTOMER" | "ADMIN") => {
       email: `${role.toLowerCase()}@example.com`,
       fullName: role,
       role,
-      status: "ACTIVE"
+      status: "ACTIVE",
+      authProvider: "LOCAL"
     }
   });
 };

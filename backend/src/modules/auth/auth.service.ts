@@ -1,10 +1,23 @@
+import crypto from "node:crypto";
 import mongoose from "mongoose";
 import { AppError } from "../../common/errors/AppError.js";
 import { getConfig, type AppConfig } from "../../config/env.js";
+import { sendOtpEmail } from "../../common/services/emailService.js";
 import { RefreshTokenModel } from "../users/refreshToken.model.js";
 import { UserModel, type UserDocument } from "../users/user.model.js";
+import { EmailVerificationModel } from "./emailVerification.model.js";
 import { hashPassword, verifyPassword } from "./password.js";
-import type { AuthResult, LoginInput, RequestContext, SafeUser, RegisterInput } from "./auth.types.js";
+import type {
+  AuthResult,
+  GoogleLoginInput,
+  LoginInput,
+  RegisterInput,
+  RegisterResult,
+  RequestContext,
+  ResendOtpInput,
+  SafeUser,
+  VerifyEmailInput
+} from "./auth.types.js";
 import {
   generateRefreshToken,
   getRefreshTokenExpiresAt,
@@ -19,6 +32,7 @@ const toSafeUser = (user: UserDocument): SafeUser => ({
   fullName: user.fullName,
   role: user.role,
   status: user.status,
+  authProvider: user.authProvider,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt
 });
@@ -26,7 +40,14 @@ const toSafeUser = (user: UserDocument): SafeUser => ({
 const isDuplicateKeyError = (error: unknown): boolean =>
   error instanceof mongoose.mongo.MongoServerError && error.code === 11000;
 
+const generateOtpCode = (): string => crypto.randomInt(100000, 999999).toString();
+const hashOtpCode = (code: string): string => crypto.createHash("sha256").update(code).digest("hex");
+
 const assertCanLogin = (user: UserDocument): void => {
+  if (user.status === "UNVERIFIED") {
+    throw new AppError(403, "AUTH_EMAIL_NOT_VERIFIED", "Email is not verified");
+  }
+
   if (user.status === "INACTIVE") {
     throw new AppError(403, "AUTH_ACCOUNT_INACTIVE", "Account is inactive");
   }
@@ -71,10 +92,37 @@ const buildAuthResult = async (user: UserDocument, context: RequestContext, conf
 
 export const register = async (
   input: RegisterInput,
-  context: RequestContext,
-  config: AppConfig = getConfig()
-): Promise<AuthResult> => {
+  _context: RequestContext,
+  _config: AppConfig = getConfig()
+): Promise<RegisterResult> => {
   const passwordHash = await hashPassword(input.password);
+
+  const existingUser = await UserModel.findOne({ email: input.email }).exec();
+  if (existingUser) {
+    if (existingUser.status !== "UNVERIFIED") {
+      throw new AppError(409, "AUTH_EMAIL_ALREADY_EXISTS", "Email is already registered");
+    }
+
+    existingUser.passwordHash = passwordHash;
+    existingUser.fullName = input.fullName;
+    await existingUser.save();
+
+    const code = generateOtpCode();
+    await EmailVerificationModel.deleteMany({ email: input.email });
+    await EmailVerificationModel.create({
+      userId: existingUser._id,
+      email: input.email,
+      codeHash: hashOtpCode(code),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    });
+
+    await sendOtpEmail(input.email, code);
+
+    return {
+      email: input.email,
+      message: "Verification code sent to your email address"
+    };
+  }
 
   try {
     const user = await UserModel.create({
@@ -82,10 +130,25 @@ export const register = async (
       passwordHash,
       fullName: input.fullName,
       role: "CUSTOMER",
-      status: "ACTIVE"
+      status: "UNVERIFIED",
+      authProvider: "LOCAL"
     });
 
-    return await buildAuthResult(user, context, config);
+    const code = generateOtpCode();
+    await EmailVerificationModel.deleteMany({ email: input.email });
+    await EmailVerificationModel.create({
+      userId: user._id,
+      email: input.email,
+      codeHash: hashOtpCode(code),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    });
+
+    await sendOtpEmail(input.email, code);
+
+    return {
+      email: input.email,
+      message: "Verification code sent to your email address"
+    };
   } catch (error) {
     if (isDuplicateKeyError(error)) {
       throw new AppError(409, "AUTH_EMAIL_ALREADY_EXISTS", "Email is already registered");
@@ -95,6 +158,159 @@ export const register = async (
   }
 };
 
+export const verifyEmail = async (
+  input: VerifyEmailInput,
+  context: RequestContext,
+  config: AppConfig = getConfig()
+): Promise<AuthResult> => {
+  const record = await EmailVerificationModel.findOne({ email: input.email }).exec();
+
+  if (!record) {
+    throw new AppError(400, "AUTH_OTP_INVALID", "Verification code is invalid or has expired");
+  }
+
+  if (record.expiresAt.getTime() <= Date.now()) {
+    await record.deleteOne();
+    throw new AppError(400, "AUTH_OTP_EXPIRED", "Verification code has expired");
+  }
+
+  if (record.attempts >= 5) {
+    await record.deleteOne();
+    throw new AppError(400, "AUTH_OTP_MAX_ATTEMPTS", "Maximum verification attempts exceeded. Please request a new code");
+  }
+
+  const codeMatches = hashOtpCode(input.code) === record.codeHash;
+
+  if (!codeMatches) {
+    record.attempts += 1;
+    await record.save();
+    throw new AppError(400, "AUTH_OTP_INVALID", "Verification code is incorrect");
+  }
+
+  const user = await UserModel.findById(record.userId).exec();
+
+  if (!user) {
+    await record.deleteOne();
+    throw new AppError(400, "AUTH_OTP_INVALID", "User for this verification code was not found");
+  }
+
+  user.status = "ACTIVE";
+  await user.save();
+  await record.deleteOne();
+
+  return await buildAuthResult(user, context, config);
+};
+
+export const resendOtp = async (input: ResendOtpInput): Promise<RegisterResult> => {
+  const user = await UserModel.findOne({ email: input.email, status: "UNVERIFIED" }).exec();
+
+  if (!user) {
+    throw new AppError(400, "AUTH_OTP_RESEND_FAILED", "No unverified account found for this email");
+  }
+
+  await EmailVerificationModel.deleteMany({ email: input.email });
+
+  const code = generateOtpCode();
+  await EmailVerificationModel.create({
+    userId: user._id,
+    email: input.email,
+    codeHash: hashOtpCode(code),
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+  });
+
+  await sendOtpEmail(input.email, code);
+
+  return {
+    email: input.email,
+    message: "Verification code sent to your email address"
+  };
+};
+
+export const loginWithGoogle = async (
+  input: GoogleLoginInput,
+  context: RequestContext,
+  config: AppConfig = getConfig()
+): Promise<AuthResult> => {
+  let googleEmail = "";
+  let googleSub = "";
+  let googleName = "";
+
+  try {
+    const googleClientId = config.googleClientId ?? "";
+    const { OAuth2Client } = await import("google-auth-library");
+    const client = new OAuth2Client(googleClientId);
+
+    let payload: { email?: string; email_verified?: boolean; name?: string; sub?: string } | undefined;
+    const isJwt = input.idToken.split(".").length === 3;
+
+    if (isJwt) {
+      const ticket = await client.verifyIdToken({
+        idToken: input.idToken,
+        audience: googleClientId
+      });
+      payload = ticket.getPayload();
+    } else {
+      // Treat as OAuth2 access token and verify/fetch userInfo from Google API
+      const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: {
+          Authorization: `Bearer ${input.idToken}`
+        }
+      });
+      if (!response.ok) {
+        throw new AppError(401, "AUTH_GOOGLE_INVALID", "Google authentication failed or token is invalid");
+      }
+      const data = await response.json() as any;
+      payload = {
+        email: data.email,
+        email_verified: data.email_verified === true || data.email_verified === "true",
+        name: data.name,
+        sub: data.sub
+      };
+    }
+
+    if (!payload?.email || !payload.email_verified || !payload.sub) {
+      throw new AppError(401, "AUTH_GOOGLE_INVALID", "Google authentication failed or email not verified");
+    }
+
+    googleEmail = payload.email.toLowerCase();
+    googleSub = payload.sub;
+    googleName = payload.name ?? payload.email.split("@")[0];
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(401, "AUTH_GOOGLE_INVALID", "Failed to verify Google token");
+  }
+
+  let user = await UserModel.findOne({ email: googleEmail }).exec();
+
+  if (user) {
+    if (user.status === "BLOCKED") {
+      throw new AppError(403, "AUTH_ACCOUNT_BLOCKED", "Account is blocked");
+    }
+
+    if (!user.googleId) {
+      user.googleId = googleSub;
+    }
+
+    if (user.status === "UNVERIFIED") {
+      user.status = "ACTIVE";
+    }
+
+    await user.save();
+    await EmailVerificationModel.deleteMany({ email: googleEmail });
+  } else {
+    user = await UserModel.create({
+      email: googleEmail,
+      fullName: googleName,
+      role: "CUSTOMER",
+      status: "ACTIVE",
+      authProvider: "GOOGLE",
+      googleId: googleSub
+    });
+  }
+
+  return await buildAuthResult(user, context, config);
+};
+
 export const login = async (
   input: LoginInput,
   context: RequestContext,
@@ -102,17 +318,17 @@ export const login = async (
 ): Promise<AuthResult> => {
   const user = await UserModel.findOne({ email: input.email }).select("+passwordHash").exec();
 
-  if (!user) {
+  if (!user || !user.passwordHash) {
     throw new AppError(401, "AUTH_INVALID_CREDENTIALS", "Invalid email or password");
   }
-
-  assertCanLogin(user);
 
   const passwordMatches = await verifyPassword(input.password, user.passwordHash);
 
   if (!passwordMatches) {
     throw new AppError(401, "AUTH_INVALID_CREDENTIALS", "Invalid email or password");
   }
+
+  assertCanLogin(user);
 
   return await buildAuthResult(user, context, config);
 };
@@ -220,6 +436,10 @@ export const changePassword = async (
   }
 
   assertCanLogin(user);
+
+  if (!user.passwordHash) {
+    throw new AppError(400, "AUTH_INVALID_CURRENT_PASSWORD", "Current password is incorrect");
+  }
 
   const passwordMatches = await verifyPassword(input.currentPassword, user.passwordHash);
 

@@ -10,7 +10,8 @@ const customerSession: AuthSession = {
     email: "customer@example.com",
     fullName: "Customer",
     role: "CUSTOMER",
-    status: "ACTIVE"
+    status: "ACTIVE",
+    authProvider: "LOCAL"
   }
 };
 

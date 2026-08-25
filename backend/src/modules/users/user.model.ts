@@ -1,13 +1,15 @@
 import { Schema, model, type HydratedDocument } from "mongoose";
-import { USER_ROLES, USER_STATUSES, type UserRole, type UserStatus } from "../../database/enums.js";
+import { AUTH_PROVIDERS, USER_ROLES, USER_STATUSES, type AuthProvider, type UserRole, type UserStatus } from "../../database/enums.js";
 import { isEmail } from "../../database/validators.js";
 
 export interface User {
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
   fullName: string;
   role: UserRole;
   status: UserStatus;
+  authProvider: AuthProvider;
+  googleId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,7 +28,6 @@ const userSchema = new Schema<User>(
     },
     passwordHash: {
       type: String,
-      required: true,
       select: false
     },
     fullName: {
@@ -47,6 +48,16 @@ const userSchema = new Schema<User>(
       enum: USER_STATUSES,
       required: true,
       default: "ACTIVE"
+    },
+    authProvider: {
+      type: String,
+      enum: AUTH_PROVIDERS,
+      required: true,
+      default: "LOCAL"
+    },
+    googleId: {
+      type: String,
+      trim: true
     }
   },
   {
@@ -62,5 +73,6 @@ const userSchema = new Schema<User>(
 );
 
 userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ googleId: 1 }, { unique: true, sparse: true });
 
 export const UserModel = model<User>("User", userSchema);

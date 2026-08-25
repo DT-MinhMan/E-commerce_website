@@ -1,7 +1,11 @@
 import { type FormEvent, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { useLogin } from "../hooks/useAuthQueries.js";
+import type { ApiError } from "../../../lib/apiClient.js";
+import { config } from "../../../config/env.js";
+import { useLogin, useResendOtp } from "../hooks/useAuthQueries.js";
 import { useAuthStore } from "../store/authStore.js";
+import { GoogleAuthButton } from "./GoogleAuthButton.js";
+import { OtpVerificationModal } from "./OtpVerificationModal.js";
 
 interface LocationState {
   from?: {
@@ -19,9 +23,11 @@ export const LoginView = () => {
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
   const login = useLogin();
+  const resendOtp = useResendOtp();
   const [email, setEmail] = useState(locationState?.registeredEmail ?? "");
   const [password, setPassword] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState<string | null>(null);
   const successMessage = locationState?.message ?? (locationState?.registered ? "Đăng ký tài khoản thành công! Vui lòng đăng nhập." : null);
 
   if (user) {
@@ -34,18 +40,29 @@ export const LoginView = () => {
     setFieldError(null);
 
     if (!email.trim() || !password) {
-      setFieldError("Email and password are required.");
+      setFieldError("Vui lòng nhập đầy đủ email và mật khẩu.");
       return;
     }
 
-    login.mutate({ email, password });
+    login.mutate(
+      { email, password },
+      {
+        onError: (err) => {
+          const apiErr = err as ApiError;
+          if (apiErr.message?.toLowerCase().includes("not verified") || apiErr.code === "AUTH_EMAIL_NOT_VERIFIED") {
+            resendOtp.mutate({ email });
+            setPendingVerifyEmail(email);
+          }
+        }
+      }
+    );
   };
 
   return (
     <div className="auth-split-wrapper">
       <div className="auth-hero-side">
         <div>
-          <p className="eyebrow" style={{ color: "#d97706" }}>Cửa hàng trực tuyến</p>
+          <p className="eyebrow">Cửa hàng trực tuyến</p>
           <h2>Trải nghiệm mua sắm hiện đại & bảo mật</h2>
           <p>Đăng nhập để quản lý đơn hàng, theo dõi giao hàng và lưu lại danh sách sản phẩm yêu thích.</p>
         </div>
@@ -73,9 +90,18 @@ export const LoginView = () => {
 
       <section className="panel auth-panel">
         <h2>Đăng nhập</h2>
-        <p style={{ margin: "0 0 16px", color: "var(--color-text-muted)", fontSize: "14px" }}>
-          Nhập thông tin tài khoản của bạn để tiếp tục
-        </p>
+
+        {config.googleClientId && (
+          <>
+            <GoogleAuthButton />
+            <div style={{ display: "flex", alignItems: "center", margin: "16px 0", color: "var(--color-text-muted)", fontSize: "13px" }}>
+              <div style={{ flex: 1, borderBottom: "1px solid #e5e7eb" }} />
+              <span style={{ padding: "0 10px" }}>hoặc đăng nhập với email</span>
+              <div style={{ flex: 1, borderBottom: "1px solid #e5e7eb" }} />
+            </div>
+          </>
+        )}
+
         <form className="auth-form" onSubmit={submit}>
           {successMessage && <p className="status-success">{successMessage}</p>}
           <label>
@@ -101,6 +127,14 @@ export const LoginView = () => {
           Chưa có tài khoản? <Link to="/register" className="text-link">Đăng ký ngay</Link>
         </p>
       </section>
+
+      {pendingVerifyEmail && (
+        <OtpVerificationModal
+          email={pendingVerifyEmail}
+          onSuccess={() => setPendingVerifyEmail(null)}
+          onClose={() => setPendingVerifyEmail(null)}
+        />
+      )}
     </div>
   );
 };

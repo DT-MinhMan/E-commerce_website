@@ -1,4 +1,4 @@
-import type { UserRole, UserStatus } from "../../database/enums.js";
+import type { AuthProvider, UserRole, UserStatus } from "../../database/enums.js";
 
 export interface SafeUser {
   id: string;
@@ -6,6 +6,7 @@ export interface SafeUser {
   fullName: string;
   role: UserRole;
   status: UserStatus;
+  authProvider: AuthProvider;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -17,10 +18,28 @@ export interface AuthResult {
   refreshTokenExpiresAt: Date;
 }
 
+export interface RegisterResult {
+  email: string;
+  message: string;
+}
+
 export interface RegisterInput {
   email: string;
   password: string;
   fullName: string;
+}
+
+export interface VerifyEmailInput {
+  email: string;
+  code: string;
+}
+
+export interface ResendOtpInput {
+  email: string;
+}
+
+export interface GoogleLoginInput {
+  idToken: string;
 }
 
 export interface LoginInput {

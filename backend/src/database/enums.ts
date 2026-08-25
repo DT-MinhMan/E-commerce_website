@@ -1,8 +1,11 @@
 export const USER_ROLES = ["CUSTOMER", "ADMIN"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
-export const USER_STATUSES = ["ACTIVE", "INACTIVE", "BLOCKED"] as const;
+export const USER_STATUSES = ["ACTIVE", "INACTIVE", "BLOCKED", "UNVERIFIED"] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
+
+export const AUTH_PROVIDERS = ["LOCAL", "GOOGLE"] as const;
+export type AuthProvider = (typeof AUTH_PROVIDERS)[number];
 
 export const CATEGORY_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type CategoryStatus = (typeof CATEGORY_STATUSES)[number];

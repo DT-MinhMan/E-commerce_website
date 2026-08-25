@@ -1,9 +1,25 @@
 import { apiClient, refreshSession, setAccessToken } from "../../../lib/apiClient.js";
-import type { AuthSession, AuthUser, ChangePasswordRequest, LoginRequest, RegisterRequest } from "../types.js";
+import type {
+  AuthSession,
+  AuthUser,
+  ChangePasswordRequest,
+  GoogleLoginRequest,
+  LoginRequest,
+  RegisterRequest,
+  RegisterResult,
+  ResendOtpRequest,
+  VerifyEmailRequest
+} from "../types.js";
 
 interface AuthResponse {
   success: true;
   data: AuthSession;
+  meta: unknown;
+}
+
+interface RegisterResponse {
+  success: true;
+  data: RegisterResult;
   meta: unknown;
 }
 
@@ -28,9 +44,25 @@ const applySession = (session: AuthSession): AuthSession => {
   return session;
 };
 
-export const registerCustomer = async (input: RegisterRequest): Promise<void> => {
-  await apiClient.post<AuthResponse>("/auth/register", input);
+export const registerCustomer = async (input: RegisterRequest): Promise<RegisterResult> => {
+  const response = await apiClient.post<RegisterResponse>("/auth/register", input);
   setAccessToken(null);
+  return response.data.data;
+};
+
+export const verifyEmail = async (input: VerifyEmailRequest): Promise<AuthSession> => {
+  const response = await apiClient.post<AuthResponse>("/auth/verify-email", input);
+  return applySession(response.data.data);
+};
+
+export const resendOtp = async (input: ResendOtpRequest): Promise<RegisterResult> => {
+  const response = await apiClient.post<RegisterResponse>("/auth/resend-otp", input);
+  return response.data.data;
+};
+
+export const googleLogin = async (input: GoogleLoginRequest): Promise<AuthSession> => {
+  const response = await apiClient.post<AuthResponse>("/auth/google", input);
+  return applySession(response.data.data);
 };
 
 export const loginCustomer = async (input: LoginRequest): Promise<AuthSession> => {

@@ -3859,55 +3859,82 @@ textarea {
 }
 
 .auth-hero-side {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  font-family: "Be Vietnam Pro", "Plus Jakarta Sans", sans-serif;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.88) 100%),
+              url("/images/auth-screen.jpg") center/cover no-repeat;
   border-radius: var(--radius-lg);
   color: #ffffff;
-  padding: 48px;
+  padding: 48px 36px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  align-items: center;
+  text-align: center;
   min-height: 460px;
   box-shadow: var(--shadow-lg);
 }
 
+.auth-hero-side .eyebrow {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f59e0b;
+  margin: 0 0 14px;
+  display: block;
+}
+
 .auth-hero-side h2 {
-  font-size: 32px;
-  font-weight: 900;
-  line-height: 1.15;
-  margin: 0 0 12px;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0 0 14px;
   color: #ffffff;
 }
 
 .auth-hero-side p {
-  color: #94a3b8;
-  font-size: 16px;
+  color: #cbd5e1;
+  font-size: 15px;
   line-height: 1.6;
-  margin: 0;
+  margin: 0 auto;
+  max-width: 340px;
 }
 
 .auth-features-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
   margin-top: 32px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .auth-feature-item {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 14.5px;
   color: #e2e8f0;
+  text-align: left;
 }
 
 .auth-feature-item svg {
-  color: var(--color-accent);
+  color: #f59e0b;
+  flex-shrink: 0;
 }
 
 .auth-panel {
   max-width: 460px;
   margin: 0 auto;
   width: 100%;
+}
+
+.auth-panel h2 {
+  text-align: center;
 }
 
 .auth-form {

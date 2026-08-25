@@ -25,6 +25,12 @@ export interface AppConfig {
   cloudinaryApiSecret?: string;
   cloudinaryProductFolder: string;
   cloudinaryCategoryFolder: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFrom?: string;
+  googleClientId?: string;
 }
 
 let cachedConfig: AppConfig | null = null;
@@ -125,7 +131,13 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
     cloudinaryApiKey: env.CLOUDINARY_API_KEY,
     cloudinaryApiSecret: env.CLOUDINARY_API_SECRET,
     cloudinaryProductFolder: env.CLOUDINARY_PRODUCT_FOLDER ?? "ecommerce/products",
-    cloudinaryCategoryFolder: env.CLOUDINARY_CATEGORY_FOLDER ?? "ecommerce/categories"
+    cloudinaryCategoryFolder: env.CLOUDINARY_CATEGORY_FOLDER ?? "ecommerce/categories",
+    smtpHost: env.SMTP_HOST,
+    smtpPort: env.SMTP_PORT ? Number(env.SMTP_PORT) : undefined,
+    smtpUser: env.SMTP_USER,
+    smtpPass: env.SMTP_PASS,
+    smtpFrom: env.SMTP_FROM ?? env.SMTP_USER,
+    googleClientId: env.GOOGLE_CLIENT_ID
   };
 };
 
