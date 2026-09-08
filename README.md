@@ -169,7 +169,8 @@ Tạo dữ liệu tài khoản mẫu, danh mục và sản phẩm demo:
 pnpm db:seed
 ```
 
-> **Tài khoản mặc định khởi tạo:**
+> 💡 **Tài khoản mặc định khởi tạo:**
+> - **Admin**: `admin@example.com` / `ChangeMe123!`
 > - **Customer**: `customer@example.com` / `ChangeMe123!`
 
 ---
@@ -184,6 +185,21 @@ pnpm dev
 Hoặc chạy riêng biệt:
 - **Backend API**: `pnpm dev:backend` (Chạy tại `http://localhost:5000`)
 - **Frontend App**: `pnpm dev:frontend` (Chạy tại `http://localhost:5173`)
+
+---
+
+### 🔑 Tài khoản mẫu trải nghiệm (Demo Credentials)
+
+Sau khi chạy lệnh `pnpm db:seed`, hệ thống đã cấu hình sẵn 2 tài khoản tương ứng với 2 vai trò người dùng (RBAC) để nhà tuyển dụng và người đánh giá tiện trải nghiệm:
+
+| Vai trò | Email | Mật khẩu | Đường dẫn | Chức năng kiểm thử chính |
+| :--- | :--- | :--- | :--- | :--- |
+| 🛡️ **Admin** | `admin@example.com` | `ChangeMe123!` | `http://localhost:5173/login` | Tự động chuyển hướng vào **Dashboard Quản trị** (`/admin`): thống kê doanh thu, quản lý danh mục, thêm/sửa sản phẩm, kiểm soát tồn kho, cập nhật trạng thái đơn hàng. |
+| 🛒 **Customer** | `customer@example.com` | `ChangeMe123!` | `http://localhost:5173/login` | Tự động chuyển hướng về **Storefront** (`/`): duyệt sản phẩm, lọc/tìm kiếm, đồng bộ giỏ hàng, đặt hàng thanh toán (Stripe / MoMo Sandbox), xem lịch sử đơn hàng. |
+
+> 📌 **Lưu ý:**
+> - Hai tài khoản trên được nạp tự động qua script [seed.ts](file:///backend/src/database/seed.ts).
+> - Bạn cũng có thể đăng ký tài khoản Customer mới trực tiếp tại trang Đăng ký (`/register`).
 
 ---
 
