@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import {
   changePassword,
+  forgotPassword,
   getCurrentUser,
   googleLogin,
   loginCustomer,
@@ -9,6 +10,7 @@ import {
   refreshAuthSession,
   registerCustomer,
   resendOtp,
+  resetPassword,
   verifyEmail
 } from "../services/authService.js";
 import { cartKeys } from "../../cart/hooks/useCartQueries.js";
@@ -19,10 +21,12 @@ import { useAuthStore } from "../store/authStore.js";
 import type {
   AuthUser,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
   GoogleLoginRequest,
   LoginRequest,
   RegisterRequest,
   ResendOtpRequest,
+  ResetPasswordRequest,
   VerifyEmailRequest
 } from "../types.js";
 
@@ -208,3 +212,16 @@ export const useChangePassword = () => {
     mutationFn: (input: ChangePasswordRequest) => changePassword(input)
   });
 };
+
+export const useForgotPassword = () => {
+  return useMutation({
+    mutationFn: (input: ForgotPasswordRequest) => forgotPassword(input)
+  });
+};
+
+export const useResetPassword = () => {
+  return useMutation({
+    mutationFn: (input: ResetPasswordRequest) => resetPassword(input)
+  });
+};
+

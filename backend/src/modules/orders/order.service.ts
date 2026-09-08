@@ -196,7 +196,7 @@ export const checkout = async (userId: string, input: CheckoutInput, logContext:
             {
               orderId: order._id,
               userId: new Types.ObjectId(userId),
-              provider: paymentMethod === "COD" ? "COD" : "STRIPE",
+              provider: paymentMethod === "COD" ? "COD" : paymentMethod === "MOMO" ? "MOMO" : "STRIPE",
               amountMinor: snapshot.totalMinor,
               currency: snapshot.currency,
               status: "PENDING"

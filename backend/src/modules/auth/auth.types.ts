@@ -52,6 +52,17 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ResetPasswordInput {
+  email: string;
+  code: string;
+  newPassword: string;
+}
+
+
 export interface RequestContext {
   userAgent?: string;
   ipAddress?: string;

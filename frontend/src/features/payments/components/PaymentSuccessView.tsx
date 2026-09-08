@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { isPaymentPollingTerminal, usePaymentStatusByOrderQuery } from "../hooks/usePaymentQueries.js";
 import { useOrderDetailQuery } from "../../orders/hooks/useOrderQueries.js";
+import { translatePaymentMethod } from "../../orders/orderUtils.js";
 
 const pollingTimeoutMs = 60_000;
 
@@ -117,7 +118,7 @@ export const PaymentSuccessView = () => {
           ) : isProcessing ? (
             <>
               <h2>Đang xác thực thanh toán...</h2>
-              <p>Hệ thống đang kiểm tra phản hồi từ Stripe. Quá trình này thường chỉ mất vài giây.</p>
+              <p>Hệ thống đang kiểm tra phản hồi từ cổng thanh toán. Quá trình này thường chỉ mất vài giây.</p>
             </>
           ) : isFailed ? (
             <>
@@ -163,7 +164,9 @@ export const PaymentSuccessView = () => {
 
           <div className="payment-detail-row">
             <span className="label">Phương thức:</span>
-            <span className="value">Stripe Checkout</span>
+            <span className="value">
+              {translatePaymentMethod(order?.paymentMethod || paymentStatus?.payment.provider)}
+            </span>
           </div>
 
           <div className="payment-detail-row">

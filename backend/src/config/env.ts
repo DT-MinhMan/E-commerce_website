@@ -20,6 +20,12 @@ export interface AppConfig {
   stripeWebhookSecret?: string;
   stripeSuccessUrl?: string;
   stripeCancelUrl?: string;
+  momoPartnerCode?: string;
+  momoAccessKey?: string;
+  momoSecretKey?: string;
+  momoApiUrl?: string;
+  momoRedirectUrl?: string;
+  momoIpnUrl?: string;
   cloudinaryCloudName?: string;
   cloudinaryApiKey?: string;
   cloudinaryApiSecret?: string;
@@ -112,6 +118,18 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
     throw new Error("STRIPE_CANCEL_URL must include {ORDER_ID}");
   }
 
+  const momoMissingKeys = ["MOMO_PARTNER_CODE", "MOMO_ACCESS_KEY", "MOMO_SECRET_KEY", "MOMO_API_URL", "MOMO_REDIRECT_URL", "MOMO_IPN_URL"].filter(
+    (key) => !env[key]
+  );
+
+  if (nodeEnv !== "test" && momoMissingKeys.length > 0) {
+    throw new Error(`Missing required MoMo environment variables: ${momoMissingKeys.join(", ")}`);
+  }
+
+  if (env.MOMO_REDIRECT_URL && !env.MOMO_REDIRECT_URL.includes("{ORDER_ID}")) {
+    throw new Error("MOMO_REDIRECT_URL must include {ORDER_ID}");
+  }
+
   return {
     nodeEnv,
     port,
@@ -127,6 +145,12 @@ export const validateEnv = (env: NodeJS.ProcessEnv = process.env): AppConfig => 
     stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
     stripeSuccessUrl: env.STRIPE_SUCCESS_URL,
     stripeCancelUrl: env.STRIPE_CANCEL_URL,
+    momoPartnerCode: env.MOMO_PARTNER_CODE,
+    momoAccessKey: env.MOMO_ACCESS_KEY,
+    momoSecretKey: env.MOMO_SECRET_KEY,
+    momoApiUrl: env.MOMO_API_URL,
+    momoRedirectUrl: env.MOMO_REDIRECT_URL,
+    momoIpnUrl: env.MOMO_IPN_URL,
     cloudinaryCloudName: env.CLOUDINARY_CLOUD_NAME,
     cloudinaryApiKey: env.CLOUDINARY_API_KEY,
     cloudinaryApiSecret: env.CLOUDINARY_API_SECRET,

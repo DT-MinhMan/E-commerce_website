@@ -109,7 +109,12 @@ export const LoginView = () => {
             <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="name@example.com" />
           </label>
           <label>
-            Mật khẩu
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Mật khẩu</span>
+              <Link to="/forgot-password" className="text-link" style={{ fontSize: "12px", fontWeight: 500 }}>
+                Quên mật khẩu?
+              </Link>
+            </div>
             <input
               type="password"
               value={password}
@@ -118,6 +123,7 @@ export const LoginView = () => {
               placeholder="••••••••"
             />
           </label>
+
           {(fieldError || error) && <p className="status-error">{fieldError ?? error}</p>}
           <button type="submit" disabled={status === "loading"}>
             {status === "loading" ? "Đang đăng nhập..." : "Đăng nhập"}

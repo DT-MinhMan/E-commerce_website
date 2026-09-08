@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useCartQuery } from "../../cart/hooks/useCartQueries.js";
 import { useCheckout } from "../../orders/hooks/useOrderQueries.js";
 import type { ShippingAddressInput } from "../../orders/types.js";
+import { useCreateCheckoutSession } from "../../payments/hooks/usePaymentQueries.js";
 
 const emptyAddress: ShippingAddressInput = {
   recipientName: "",
@@ -45,8 +46,9 @@ export const CheckoutPageView = () => {
   const navigate = useNavigate();
   const cartQuery = useCartQuery();
   const checkout = useCheckout();
+  const checkoutSession = useCreateCheckoutSession();
   const [shippingAddress, setShippingAddress] = useState<ShippingAddressInput>(emptyAddress);
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "card">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "card" | "momo">("cod");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const cart = cartQuery.data;
 
@@ -70,11 +72,22 @@ export const CheckoutPageView = () => {
           ...shippingAddress,
           countryCode: shippingAddress.countryCode.toUpperCase()
         },
-        paymentMethod: paymentMethod.toUpperCase() as "COD" | "CARD"
+        paymentMethod: paymentMethod.toUpperCase() as "COD" | "CARD" | "MOMO"
       },
       {
         onSuccess: (order) => {
-          navigate(`/orders/${order.id}`);
+          if (paymentMethod === "cod") {
+            navigate(`/orders/${order.id}`);
+          } else {
+            checkoutSession.mutate(
+              { orderId: order.id },
+              {
+                onError: () => {
+                  navigate(`/orders/${order.id}`);
+                }
+              }
+            );
+          }
         }
       }
     );
@@ -309,6 +322,25 @@ export const CheckoutPageView = () => {
                       </div>
                     </div>
                   </label>
+
+                  {cart.currency === "VND" && (
+                    <label className={`payment-card ${paymentMethod === "momo" ? "selected" : ""}`}>
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="momo"
+                        checked={paymentMethod === "momo"}
+                        onChange={() => setPaymentMethod("momo")}
+                      />
+                      <div className="payment-card-body">
+                        <span className="payment-card-icon" style={{ color: "#d82d8b" }}>🌸</span>
+                        <div>
+                          <strong>Ví MoMo</strong>
+                          <p>Thanh toán qua ví điện tử MoMo (Sandbox).</p>
+                        </div>
+                      </div>
+                    </label>
+                  )}
                 </div>
               </div>
 
@@ -324,11 +356,11 @@ export const CheckoutPageView = () => {
               )}
 
               <div className="checkout-actions">
-                <button type="submit" className="checkout-submit-btn" disabled={checkout.isPending}>
-                  {checkout.isPending ? (
+                <button type="submit" className="checkout-submit-btn" disabled={checkout.isPending || checkoutSession.isPending}>
+                  {checkout.isPending || checkoutSession.isPending ? (
                     <>
                       <span className="btn-spinner" />
-                      Processing Order...
+                      {checkout.isPending ? "Processing Order..." : "Connecting to Payment..."}
                     </>
                   ) : (
                     <>

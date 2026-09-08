@@ -18,6 +18,7 @@ import { healthRoutes, readinessRoutes } from "./modules/health/health.routes.js
 import { adminOrderRoutes, orderRoutes } from "./modules/orders/order.routes.js";
 import { paymentRoutes } from "./modules/payments/payment.routes.js";
 import { stripeWebhookRoutes } from "./modules/payments/stripe.webhook.routes.js";
+import { momoWebhookRoutes } from "./modules/payments/momo.webhook.routes.js";
 import { adminUploadRoutes } from "./modules/uploads/upload.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 
@@ -43,6 +44,7 @@ export const createApp = (config: AppConfig = getConfig()): Express => {
   app.use(globalApiRateLimiter());
   app.use(requestLogger(config));
   app.use("/api/v1/webhooks/stripe", webhookRateLimiter(), express.raw({ type: "application/json" }), stripeWebhookRoutes);
+  app.use("/api/v1/webhooks/momo", webhookRateLimiter(), express.json(), momoWebhookRoutes);
   app.use("/api/v1/admin/uploads", express.json({ limit: "6mb" }), adminUploadRoutes);
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true, limit: "1mb" }));

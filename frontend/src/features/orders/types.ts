@@ -13,7 +13,7 @@ export interface ShippingAddressInput {
 
 export interface CheckoutInput {
   shippingAddress: ShippingAddressInput;
-  paymentMethod?: "COD" | "CARD";
+  paymentMethod?: "COD" | "CARD" | "MOMO";
 }
 
 export interface OrderItem {

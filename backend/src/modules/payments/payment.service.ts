@@ -6,6 +6,7 @@ import { getConfig, type AppConfig } from "../../config/env.js";
 import { OrderModel, type Order } from "../orders/order.model.js";
 import { PaymentModel, type Payment } from "./payment.model.js";
 import { createStripeCheckoutSession } from "./stripe.client.js";
+import { createMomoPaymentRequest } from "./momo.client.js";
 
 type OrderRecord = Order & { _id: Types.ObjectId };
 type PaymentRecord = Payment & { _id: Types.ObjectId };
@@ -127,6 +128,51 @@ export const createCheckoutSession = async (
   }
 
   assertPaymentMatchesOrder(payment, order);
+
+  if (payment.provider === "MOMO") {
+    if (payment.currency !== "VND") {
+      throw new AppError(400, "MOMO_VND_ONLY", "MoMo only supports payments in VND");
+    }
+
+    const momoResponse = await createMomoPaymentRequest(
+      {
+        amount: payment.amountMinor,
+        orderId: order._id.toString(),
+        orderInfo: `Thanh toán đơn hàng #${order.orderNumber}`
+      },
+      config
+    );
+
+    await PaymentModel.updateOne(
+      {
+        _id: payment._id,
+        status: { $in: [...payablePaymentStatuses] }
+      },
+      {
+        $set: {
+          providerCheckoutSessionId: momoResponse.requestId
+        },
+        $unset: {
+          failureCode: "",
+          failureMessage: ""
+        }
+      },
+      { runValidators: true }
+    ).exec();
+
+    logger.info(config, "MoMo checkout request created", {
+      ...logContext,
+      userId,
+      orderId: order._id.toString(),
+      paymentId: payment._id.toString(),
+      providerCheckoutSessionId: momoResponse.requestId
+    });
+
+    return {
+      checkoutUrl: momoResponse.payUrl,
+      sessionId: momoResponse.requestId
+    };
+  }
 
   const metadata = buildMetadata(order, payment);
   const stripeSession = await createStripeCheckoutSession(

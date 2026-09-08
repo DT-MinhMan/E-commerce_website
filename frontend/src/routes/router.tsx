@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { AppLayout } from "../layouts/AppLayout.js";
 import { AccountPage } from "../pages/account/AccountPage.js";
 import { LoginPage } from "../pages/account/LoginPage.js";
+import { ForgotPasswordPage } from "../pages/account/ForgotPasswordPage.js";
 import { OrderDetailPage } from "../pages/account/OrderDetailPage.js";
 import { OrderHistoryPage } from "../pages/account/OrderHistoryPage.js";
 import { PaymentCancelPage } from "../pages/account/PaymentCancelPage.js";
@@ -52,6 +53,10 @@ export const router = createBrowserRouter([
       {
         path: "login",
         element: <LoginPage />
+      },
+      {
+        path: "forgot-password",
+        element: <ForgotPasswordPage />
       },
       {
         path: "register",

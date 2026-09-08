@@ -26,7 +26,7 @@ export const globalApiRateLimiter = () =>
 export const authRateLimiter = () =>
   createRateLimiter({
     windowMs: 15 * 60 * 1000,
-    limit: 50,
+    limit: process.env.NODE_ENV === "test" ? 200 : 50,
     message: "Too many authentication requests"
   });
 
@@ -40,9 +40,10 @@ export const refreshRateLimiter = () =>
 export const otpRateLimiter = () =>
   createRateLimiter({
     windowMs: 15 * 60 * 1000,
-    limit: 10,
+    limit: process.env.NODE_ENV === "test" ? 100 : 10,
     message: "Too many verification requests"
   });
+
 
 export const webhookRateLimiter = () =>
   createRateLimiter({

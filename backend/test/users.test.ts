@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { getConfig } from "../src/config/env.js";
 import { signAccessToken } from "../src/modules/auth/tokens.js";
+import { RefreshTokenModel } from "../src/modules/users/refreshToken.model.js";
 import { UserModel } from "../src/modules/users/user.model.js";
 import { clearTestDatabase, connectTestDatabase, disconnectTestDatabase } from "./helpers/database.js";
 
@@ -132,5 +133,76 @@ describe("users API", () => {
         .send({ email: "user@example.com", password: "OldPassword123" })
         .expect(401);
     });
+
+    it("returns 400 when changing password on a Google account without local password", async () => {
+      const user = await UserModel.create({
+        email: "google@example.com",
+        fullName: "Google User",
+        role: "CUSTOMER",
+        status: "ACTIVE",
+        authProvider: "GOOGLE",
+        googleId: "google-123"
+      });
+
+      const token = signAccessToken(getConfig(), { sub: user._id.toString(), role: "CUSTOMER" });
+
+      const response = await request(app)
+        .put("/api/v1/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ currentPassword: "OldPassword123", newPassword: "NewPassword123" })
+        .expect(400);
+
+      expect(response.body.error.code).toBe("AUTH_NO_LOCAL_PASSWORD");
+    });
+
+    it("returns 400 when new password is identical to current password", async () => {
+      const user = await UserModel.create({
+        email: "user@example.com",
+        passwordHash: await bcrypt.hash("OldPassword123", 10),
+        fullName: "User Test",
+        role: "CUSTOMER",
+        status: "ACTIVE"
+      });
+
+      const token = signAccessToken(getConfig(), { sub: user._id.toString(), role: "CUSTOMER" });
+
+      const response = await request(app)
+        .put("/api/v1/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ currentPassword: "OldPassword123", newPassword: "OldPassword123" })
+        .expect(400);
+
+      expect(response.body.error.code).toBe("AUTH_PASSWORD_SAME_AS_OLD");
+    });
+
+    it("revokes all refresh tokens when password is changed", async () => {
+      const user = await UserModel.create({
+        email: "user@example.com",
+        passwordHash: await bcrypt.hash("OldPassword123", 10),
+        fullName: "User Test",
+        role: "CUSTOMER",
+        status: "ACTIVE"
+      });
+
+      const loginRes = await request(app)
+        .post("/api/v1/auth/login")
+        .send({ email: "user@example.com", password: "OldPassword123" })
+        .expect(200);
+
+      const token = loginRes.body.data.accessToken as string;
+
+      await request(app)
+        .put("/api/v1/users/me/password")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ currentPassword: "OldPassword123", newPassword: "NewPassword123" })
+        .expect(200);
+
+      const existingTokens = await RefreshTokenModel.find({ userId: user._id }).exec();
+      expect(existingTokens.length).toBeGreaterThan(0);
+      for (const rt of existingTokens) {
+        expect(rt.revokedAt).toBeInstanceOf(Date);
+      }
+    });
   });
 });
+

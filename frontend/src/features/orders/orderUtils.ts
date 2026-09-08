@@ -29,7 +29,8 @@ export const translatePaymentStatus = (status: string): string => {
 export const translatePaymentMethod = (method?: string): string => {
   const map: Record<string, string> = {
     COD: "Thanh toán khi nhận hàng (COD)",
-    CARD: "Thẻ tín dụng / Stripe"
+    CARD: "Thẻ tín dụng / Stripe",
+    MOMO: "Ví MoMo"
   };
   return map[method ?? ""] || method || "Thanh toán khi nhận hàng (COD)";
 };

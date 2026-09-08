@@ -37,7 +37,7 @@ export const PaymentCancelView = () => {
                 disabled={checkoutSession.isPending}
                 onClick={() => checkoutSession.mutate({ orderId })}
               >
-                {checkoutSession.isPending ? "Đang kết nối Stripe..." : "Thử thanh toán lại"}
+                {checkoutSession.isPending ? "Đang kết nối cổng thanh toán..." : "Thử thanh toán lại"}
               </button>
               <Link className="secondary-action" to={`/orders/${orderId}`}>
                 Xem chi tiết đơn hàng

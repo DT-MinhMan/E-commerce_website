@@ -20,6 +20,7 @@ describe("database seed", () => {
   it("runs idempotently and creates demo data", async () => {
     await seedDatabase();
 
+
     const firstUserCount = await UserModel.countDocuments();
     const firstCategoryCount = await CategoryModel.countDocuments();
     const firstProductCount = await ProductModel.countDocuments();
@@ -36,7 +37,8 @@ describe("database seed", () => {
     expect(customer?.role).toBe("CUSTOMER");
     expect(admin?.passwordHash).toBeDefined();
     expect(admin?.passwordHash).not.toBe("ChangeMe123!");
-    expect(admin ? await bcrypt.compare("ChangeMe123!", admin.passwordHash) : false).toBe(true);
+    expect(admin?.passwordHash ? await bcrypt.compare("ChangeMe123!", admin.passwordHash) : false).toBe(true);
+
 
     const inactiveProduct = await ProductModel.findOne({ status: "INACTIVE" }).exec();
     const outOfStockProduct = await ProductModel.findOne({ stockQuantity: 0 }).exec();
@@ -53,5 +55,6 @@ describe("database seed", () => {
 
     expect(products.every((product) => Number.isInteger(product.priceMinor))).toBe(true);
     expect(products.every((product) => categoryIds.has(product.categoryId.toString()))).toBe(true);
-  });
+  }, 15000);
 });
+

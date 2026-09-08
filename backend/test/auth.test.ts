@@ -4,6 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app.js";
 import { EmailVerificationModel } from "../src/modules/auth/emailVerification.model.js";
+import { PasswordResetModel } from "../src/modules/auth/passwordReset.model.js";
 import { RefreshTokenModel } from "../src/modules/users/refreshToken.model.js";
 import { UserModel } from "../src/modules/users/user.model.js";
 import { clearTestDatabase, connectTestDatabase, disconnectTestDatabase } from "./helpers/database.js";
@@ -216,4 +217,218 @@ describe("auth API", () => {
     const rotatedOriginal = await RefreshTokenModel.findById(originalToken?._id).exec();
     expect(rotatedOriginal?.revokedAt).toBeInstanceOf(Date);
   });
+
+  describe("POST /api/v1/auth/forgot-password and /reset-password", () => {
+    it("creates a password reset record and returns generic message for valid user", async () => {
+      await createUser("reset@example.com", "Password123!");
+
+      const res = await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "reset@example.com" })
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.message).toBeDefined();
+
+      const record = await PasswordResetModel.findOne({ email: "reset@example.com" }).exec();
+      expect(record).not.toBeNull();
+      expect(record?.codeHash).toBeDefined();
+      expect(record?.attempts).toBe(0);
+    });
+
+    it("returns generic 200 message and creates no record when email does not exist", async () => {
+      const res = await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "nonexistent@example.com" })
+        .expect(200);
+
+      expect(res.body.success).toBe(true);
+      const record = await PasswordResetModel.findOne({ email: "nonexistent@example.com" }).exec();
+      expect(record).toBeNull();
+    });
+
+    it("returns generic 200 message and creates no record for unverified or blocked user", async () => {
+      await createUser("unverified@example.com", "Password123!", "UNVERIFIED");
+      await createUser("blocked-reset@example.com", "Password123!", "BLOCKED");
+
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "unverified@example.com" })
+        .expect(200);
+      expect(await PasswordResetModel.findOne({ email: "unverified@example.com" }).exec()).toBeNull();
+
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "blocked-reset@example.com" })
+        .expect(200);
+      expect(await PasswordResetModel.findOne({ email: "blocked-reset@example.com" }).exec()).toBeNull();
+    });
+
+    it("returns generic 200 message and creates no record for Google-only user without password", async () => {
+      await UserModel.create({
+        email: "google-only@example.com",
+        fullName: "Google Only",
+        role: "CUSTOMER",
+        status: "ACTIVE",
+        authProvider: "GOOGLE",
+        googleId: "g-123"
+      });
+
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "google-only@example.com" })
+        .expect(200);
+
+      expect(await PasswordResetModel.findOne({ email: "google-only@example.com" }).exec()).toBeNull();
+    });
+
+    it("respects 60s cooldown on forgot-password requests", async () => {
+      await createUser("cooldown@example.com", "Password123!");
+
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "cooldown@example.com" })
+        .expect(200);
+
+      const recordFirst = await PasswordResetModel.findOne({ email: "cooldown@example.com" }).exec();
+      const firstHash = recordFirst?.codeHash;
+
+      // Second request immediately
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "cooldown@example.com" })
+        .expect(200);
+
+      const recordSecond = await PasswordResetModel.findOne({ email: "cooldown@example.com" }).exec();
+      expect(recordSecond?.codeHash).toBe(firstHash);
+    });
+
+    it("rejects reset-password with validation error for invalid input", async () => {
+      const res = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({ email: "invalid", code: "12", newPassword: "short" })
+        .expect(400);
+
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("rejects reset-password with incorrect code and increments attempts", async () => {
+      await createUser("reset-wrong@example.com", "Password123!");
+
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "reset-wrong@example.com" })
+        .expect(200);
+
+      const res = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({ email: "reset-wrong@example.com", code: "000000", newPassword: "NewPassword123!" })
+        .expect(400);
+
+      expect(res.body.error.code).toBe("AUTH_RESET_CODE_INVALID");
+
+      const record = await PasswordResetModel.findOne({ email: "reset-wrong@example.com" }).exec();
+      expect(record?.attempts).toBe(1);
+    });
+
+    it("deletes reset record after 5 failed attempts", async () => {
+      await createUser("reset-max@example.com", "Password123!");
+
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "reset-max@example.com" })
+        .expect(200);
+
+      for (let i = 0; i < 4; i++) {
+        await request(app)
+          .post("/api/v1/auth/reset-password")
+          .send({ email: "reset-max@example.com", code: "000000", newPassword: "NewPassword123!" })
+          .expect(400);
+      }
+
+      const res = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({ email: "reset-max@example.com", code: "000000", newPassword: "NewPassword123!" })
+        .expect(400);
+
+      expect(res.body.error.code).toBe("AUTH_OTP_MAX_ATTEMPTS");
+
+      const record = await PasswordResetModel.findOne({ email: "reset-max@example.com" }).exec();
+      expect(record).toBeNull();
+    });
+
+    it("rejects reset-password if new password is same as current password", async () => {
+      await createUser("reset-same@example.com", "CurrentPassword123!");
+
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "reset-same@example.com" })
+        .expect(200);
+
+      const code = "654321";
+      const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+      await PasswordResetModel.updateOne({ email: "reset-same@example.com" }, { $set: { codeHash } }).exec();
+
+      const res = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({ email: "reset-same@example.com", code, newPassword: "CurrentPassword123!" })
+        .expect(400);
+
+      expect(res.body.error.code).toBe("AUTH_PASSWORD_SAME_AS_OLD");
+    });
+
+    it("successfully resets password, revokes refresh tokens, and allows login with new password", async () => {
+      const user = await createUser("reset-success@example.com", "OldPassword123!");
+
+      // Login to obtain a refresh token
+      await request(app)
+        .post("/api/v1/auth/login")
+        .send({ email: "reset-success@example.com", password: "OldPassword123!" })
+        .expect(200);
+
+      const tokenBefore = await RefreshTokenModel.findOne({ userId: user._id }).exec();
+      expect(tokenBefore?.revokedAt).toBeUndefined();
+
+      // Request reset
+      await request(app)
+        .post("/api/v1/auth/forgot-password")
+        .send({ email: "reset-success@example.com" })
+        .expect(200);
+
+      const code = "987654";
+      const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+      await PasswordResetModel.updateOne({ email: "reset-success@example.com" }, { $set: { codeHash } }).exec();
+
+      // Reset password
+      const resetRes = await request(app)
+        .post("/api/v1/auth/reset-password")
+        .send({ email: "reset-success@example.com", code, newPassword: "BrandNewPassword123!" })
+        .expect(200);
+
+      expect(resetRes.body.success).toBe(true);
+
+      // Verify reset record deleted
+      const recordAfter = await PasswordResetModel.findOne({ email: "reset-success@example.com" }).exec();
+      expect(recordAfter).toBeNull();
+
+      // Verify old refresh token revoked
+      const tokenAfter = await RefreshTokenModel.findById(tokenBefore?._id).exec();
+      expect(tokenAfter?.revokedAt).toBeInstanceOf(Date);
+
+      // Login with old password should fail
+      await request(app)
+        .post("/api/v1/auth/login")
+        .send({ email: "reset-success@example.com", password: "OldPassword123!" })
+        .expect(401);
+
+      // Login with new password should succeed
+      const newLogin = await request(app)
+        .post("/api/v1/auth/login")
+        .send({ email: "reset-success@example.com", password: "BrandNewPassword123!" })
+        .expect(200);
+
+      expect(newLogin.body.success).toBe(true);
+    });
+  });
 });
+

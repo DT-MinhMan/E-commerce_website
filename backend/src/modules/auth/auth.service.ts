@@ -2,19 +2,22 @@ import crypto from "node:crypto";
 import mongoose from "mongoose";
 import { AppError } from "../../common/errors/AppError.js";
 import { getConfig, type AppConfig } from "../../config/env.js";
-import { sendOtpEmail } from "../../common/services/emailService.js";
+import { sendOtpEmail, sendPasswordResetEmail } from "../../common/services/emailService.js";
 import { RefreshTokenModel } from "../users/refreshToken.model.js";
 import { UserModel, type UserDocument } from "../users/user.model.js";
 import { EmailVerificationModel } from "./emailVerification.model.js";
+import { PasswordResetModel } from "./passwordReset.model.js";
 import { hashPassword, verifyPassword } from "./password.js";
 import type {
   AuthResult,
+  ForgotPasswordInput,
   GoogleLoginInput,
   LoginInput,
   RegisterInput,
   RegisterResult,
   RequestContext,
   ResendOtpInput,
+  ResetPasswordInput,
   SafeUser,
   VerifyEmailInput
 } from "./auth.types.js";
@@ -430,6 +433,13 @@ export const getUserById = async (userId: string): Promise<SafeUser> => {
   return toSafeUser(user);
 };
 
+export const revokeAllUserTokens = async (userId: mongoose.Types.ObjectId | string): Promise<void> => {
+  await RefreshTokenModel.updateMany(
+    { userId, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } }
+  ).exec();
+};
+
 export const changePassword = async (
   userId: string,
   input: { currentPassword: string; newPassword: string }
@@ -442,6 +452,10 @@ export const changePassword = async (
 
   assertCanLogin(user);
 
+  if (user.authProvider === "GOOGLE" && !user.passwordHash) {
+    throw new AppError(400, "AUTH_NO_LOCAL_PASSWORD", "Tài khoản đăng nhập bằng Google không có mật khẩu để đổi");
+  }
+
   if (!user.passwordHash) {
     throw new AppError(400, "AUTH_INVALID_CURRENT_PASSWORD", "Current password is incorrect");
   }
@@ -452,6 +466,108 @@ export const changePassword = async (
     throw new AppError(400, "AUTH_INVALID_CURRENT_PASSWORD", "Current password is incorrect");
   }
 
+  if (input.currentPassword === input.newPassword) {
+    throw new AppError(400, "AUTH_PASSWORD_SAME_AS_OLD", "Mật khẩu mới không được trùng với mật khẩu hiện tại");
+  }
+
   user.passwordHash = await hashPassword(input.newPassword);
   await user.save();
+
+  await revokeAllUserTokens(user._id);
+};
+
+export const forgotPassword = async (input: ForgotPasswordInput): Promise<{ message: string }> => {
+  const genericMessage = "Nếu email tồn tại trong hệ thống, mã xác thực đã được gửi.";
+
+  const user = await UserModel.findOne({ email: input.email }).select("+passwordHash").exec();
+  if (!user) {
+    return { message: genericMessage };
+  }
+
+  if (user.status === "UNVERIFIED" || user.status === "INACTIVE" || user.status === "BLOCKED") {
+    return { message: genericMessage };
+  }
+
+  if (user.authProvider === "GOOGLE" && !user.passwordHash) {
+    return { message: genericMessage };
+  }
+
+  const existingReset = await PasswordResetModel.findOne({ email: input.email }).exec();
+  if (existingReset && Date.now() - existingReset.updatedAt.getTime() < 60 * 1000) {
+    return { message: genericMessage };
+  }
+
+  const code = generateOtpCode();
+  await PasswordResetModel.findOneAndUpdate(
+    { email: input.email },
+    {
+      userId: user._id,
+      email: input.email,
+      codeHash: hashOtpCode(code),
+      attempts: 0,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  ).exec();
+
+  await sendPasswordResetEmail(input.email, code);
+
+  return { message: genericMessage };
+};
+
+export const resetPassword = async (input: ResetPasswordInput): Promise<{ message: string }> => {
+  const resetRecord = await PasswordResetModel.findOne({ email: input.email }).exec();
+  if (!resetRecord) {
+    throw new AppError(400, "AUTH_RESET_CODE_INVALID", "Mã xác thực không hợp lệ hoặc đã hết hạn");
+  }
+
+  if (resetRecord.expiresAt.getTime() < Date.now()) {
+    await PasswordResetModel.deleteOne({ _id: resetRecord._id }).exec();
+    throw new AppError(400, "AUTH_RESET_CODE_EXPIRED", "Mã xác thực đã hết hạn");
+  }
+
+  if (resetRecord.attempts >= 5) {
+    await PasswordResetModel.deleteOne({ _id: resetRecord._id }).exec();
+    throw new AppError(400, "AUTH_OTP_MAX_ATTEMPTS", "Bạn đã nhập sai quá số lần cho phép. Vui lòng yêu cầu mã mới");
+  }
+
+  const codeHash = hashOtpCode(input.code);
+  if (resetRecord.codeHash !== codeHash) {
+    resetRecord.attempts += 1;
+    if (resetRecord.attempts >= 5) {
+      await PasswordResetModel.deleteOne({ _id: resetRecord._id }).exec();
+      throw new AppError(400, "AUTH_OTP_MAX_ATTEMPTS", "Bạn đã nhập sai quá số lần cho phép. Vui lòng yêu cầu mã mới");
+    }
+    await resetRecord.save();
+    throw new AppError(400, "AUTH_RESET_CODE_INVALID", "Mã xác thực không hợp lệ");
+  }
+
+  const user = await UserModel.findById(resetRecord.userId).select("+passwordHash").exec();
+  if (!user) {
+    await PasswordResetModel.deleteOne({ _id: resetRecord._id }).exec();
+    throw new AppError(404, "AUTH_USER_NOT_FOUND", "Tài khoản không tồn tại");
+  }
+
+  if (user.status === "BLOCKED") {
+    throw new AppError(403, "AUTH_ACCOUNT_BLOCKED", "Tài khoản đã bị khóa");
+  }
+
+  if (user.status === "INACTIVE") {
+    throw new AppError(403, "AUTH_ACCOUNT_INACTIVE", "Tài khoản không hoạt động");
+  }
+
+  if (user.passwordHash) {
+    const isSamePassword = await verifyPassword(input.newPassword, user.passwordHash);
+    if (isSamePassword) {
+      throw new AppError(400, "AUTH_PASSWORD_SAME_AS_OLD", "Mật khẩu mới không được trùng với mật khẩu hiện tại");
+    }
+  }
+
+  user.passwordHash = await hashPassword(input.newPassword);
+  await user.save();
+
+  await revokeAllUserTokens(user._id);
+  await PasswordResetModel.deleteOne({ _id: resetRecord._id }).exec();
+
+  return { message: "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại." };
 };

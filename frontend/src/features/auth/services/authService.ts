@@ -3,11 +3,13 @@ import type {
   AuthSession,
   AuthUser,
   ChangePasswordRequest,
+  ForgotPasswordRequest,
   GoogleLoginRequest,
   LoginRequest,
   RegisterRequest,
   RegisterResult,
   ResendOtpRequest,
+  ResetPasswordRequest,
   VerifyEmailRequest
 } from "../types.js";
 
@@ -86,4 +88,14 @@ export const getCurrentUser = async (): Promise<AuthUser> => {
 
 export const changePassword = async (input: ChangePasswordRequest): Promise<void> => {
   await apiClient.put("/users/me/password", input);
+};
+
+export const forgotPassword = async (input: ForgotPasswordRequest): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ success: true; data: { message: string } }>("/auth/forgot-password", input);
+  return response.data.data;
+};
+
+export const resetPassword = async (input: ResetPasswordRequest): Promise<{ message: string }> => {
+  const response = await apiClient.post<{ success: true; data: { message: string } }>("/auth/reset-password", input);
+  return response.data.data;
 };

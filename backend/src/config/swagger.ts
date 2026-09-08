@@ -297,6 +297,22 @@ export const swaggerSpec = (config: AppConfig) => ({
         }
       }
     },
+    "/api/v1/webhooks/momo": {
+      post: {
+        summary: "Receive signed MoMo IPN webhook events",
+        tags: ["Webhooks"],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object" } } }
+        },
+        responses: {
+          "204": {
+            description: "Webhook accepted with no content"
+          },
+          "400": { description: "Missing or invalid MoMo signature", ...errorResponse }
+        }
+      }
+    },
     "/api/v1/categories": {
       get: {
         summary: "List active public categories",
@@ -788,7 +804,7 @@ export const swaggerSpec = (config: AppConfig) => ({
           currency: { type: "string", example: "USD" },
           orderStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "RETURNED"] },
           paymentStatus: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"] },
-          paymentMethod: { type: "string", enum: ["COD", "CARD"] },
+          paymentMethod: { type: "string", enum: ["COD", "CARD", "MOMO"] },
           paidAt: { type: "string", format: "date-time", nullable: true },
           cancelledAt: { type: "string", format: "date-time", nullable: true },
           completedAt: { type: "string", format: "date-time", nullable: true },
@@ -813,7 +829,7 @@ export const swaggerSpec = (config: AppConfig) => ({
               status: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"] },
               amountMinor: { type: "integer", example: 17998 },
               currency: { type: "string", example: "USD" },
-              provider: { type: "string", enum: ["STRIPE", "COD"] },
+              provider: { type: "string", enum: ["STRIPE", "COD", "MOMO"] },
               providerCheckoutSessionId: { type: "string", nullable: true, example: "cs_test_123" },
               providerPaymentId: { type: "string", nullable: true, example: "pi_test_123" },
               paidAt: { type: "string", format: "date-time", nullable: true },

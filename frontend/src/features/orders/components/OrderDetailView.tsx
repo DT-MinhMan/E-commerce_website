@@ -90,7 +90,7 @@ export const OrderDetailView = () => {
                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
                 <line x1="1" y1="10" x2="23" y2="10" />
               </svg>
-              <span>{checkoutSession.isPending ? "Đang mở Stripe..." : "Thanh toán ngay"}</span>
+              <span>{checkoutSession.isPending ? (order.paymentMethod === "MOMO" ? "Đang mở MoMo..." : "Đang mở Stripe...") : "Thanh toán ngay"}</span>
             </button>
           )}
           {showCancelBtn && (

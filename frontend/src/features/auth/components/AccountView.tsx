@@ -16,6 +16,7 @@ export const AccountView = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
@@ -38,6 +39,11 @@ export const AccountView = () => {
       return;
     }
 
+    if (currentPassword === newPassword) {
+      setPasswordError("Mật khẩu mới không được trùng với mật khẩu hiện tại.");
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setPasswordError("Xác nhận mật khẩu mới không khớp.");
       return;
@@ -55,7 +61,15 @@ export const AccountView = () => {
         },
         onError: (err) => {
           const apiErr = err as ApiError;
-          setPasswordError(apiErr.message ?? "Đổi mật khẩu thất bại. Vui lòng thử lại.");
+          if (apiErr.code === "AUTH_PASSWORD_SAME_AS_OLD") {
+            setPasswordError("Mật khẩu mới không được trùng với mật khẩu hiện tại.");
+          } else if (apiErr.code === "AUTH_NO_LOCAL_PASSWORD") {
+            setPasswordError("Tài khoản đăng nhập bằng Google không có mật khẩu để đổi.");
+          } else if (apiErr.code === "AUTH_INVALID_CURRENT_PASSWORD") {
+            setPasswordError("Mật khẩu hiện tại không chính xác.");
+          } else {
+            setPasswordError(apiErr.message ?? "Đổi mật khẩu thất bại. Vui lòng thử lại.");
+          }
         }
       }
     );
@@ -87,16 +101,25 @@ export const AccountView = () => {
             </svg>
             <span>Lịch sử đơn hàng</span>
           </Link>
-          <button
-            type="button"
-            className="secondary-action"
-            onClick={() => {
-              setShowPasswordForm(!showPasswordForm);
-              setPasswordError(null);
-            }}
-          >
-            {showPasswordForm ? "Hủy đổi mật khẩu" : "Đổi mật khẩu"}
-          </button>
+          {user.authProvider !== "GOOGLE" ? (
+            <button
+              type="button"
+              className="secondary-action"
+              onClick={() => {
+                setShowPasswordForm(!showPasswordForm);
+                setPasswordError(null);
+              }}
+            >
+              {showPasswordForm ? "Hủy đổi mật khẩu" : "Đổi mật khẩu"}
+            </button>
+          ) : (
+            <span
+              className="secondary-action"
+              style={{ cursor: "default", opacity: 0.85, fontSize: "13px" }}
+            >
+              Đăng nhập Google
+            </span>
+          )}
           <button
             type="button"
             className="primary-action logout-btn"
@@ -109,12 +132,21 @@ export const AccountView = () => {
 
         {showPasswordForm && (
           <form className="password-change-form" onSubmit={handlePasswordSubmit}>
-            <h3>Đổi mật khẩu</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <h3 style={{ margin: 0 }}>Đổi mật khẩu</h3>
+              <button
+                type="button"
+                onClick={() => setShowPasswords(!showPasswords)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", color: "var(--color-primary)" }}
+              >
+                {showPasswords ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              </button>
+            </div>
             {passwordError && <p className="status-error">{passwordError}</p>}
             <label>
               Mật khẩu hiện tại
               <input
-                type="password"
+                type={showPasswords ? "text" : "password"}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="••••••••"
@@ -124,7 +156,7 @@ export const AccountView = () => {
             <label>
               Mật khẩu mới
               <input
-                type="password"
+                type={showPasswords ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Ít nhất 8 ký tự, gồm chữ và số"
@@ -134,7 +166,7 @@ export const AccountView = () => {
             <label>
               Xác nhận mật khẩu mới
               <input
-                type="password"
+                type={showPasswords ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Nhập lại mật khẩu mới"
@@ -150,6 +182,7 @@ export const AccountView = () => {
             </button>
           </form>
         )}
+
       </div>
     </div>
   );

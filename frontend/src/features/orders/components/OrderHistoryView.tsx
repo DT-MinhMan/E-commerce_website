@@ -257,7 +257,7 @@ export const OrderHistoryView = () => {
                         onClick={() => checkoutSession.mutate({ orderId: order.id })}
                       >
                         {checkoutSession.isPending && checkoutSession.variables?.orderId === order.id
-                          ? "Đang mở Stripe..."
+                          ? (order.paymentMethod === "MOMO" ? "Đang mở MoMo..." : "Đang mở Stripe...")
                           : "Thanh toán ngay"}
                       </button>
                     )}

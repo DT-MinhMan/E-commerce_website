@@ -22,10 +22,10 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export const PAYMENT_STATUSES = ["PENDING", "PAID", "FAILED", "REFUNDED"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
-export const PAYMENT_METHODS = ["COD", "CARD"] as const;
+export const PAYMENT_METHODS = ["COD", "CARD", "MOMO"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-export const PAYMENT_PROVIDERS = ["STRIPE", "COD"] as const;
+export const PAYMENT_PROVIDERS = ["STRIPE", "COD", "MOMO"] as const;
 export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 export const WEBHOOK_PROCESSING_STATUSES = ["RECEIVED", "PROCESSING", "PROCESSED", "FAILED", "IGNORED"] as const;

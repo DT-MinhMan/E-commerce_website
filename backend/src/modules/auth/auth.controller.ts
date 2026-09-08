@@ -6,10 +6,22 @@ import {
   parseLoginInput,
   parseRegisterInput,
   parseResendOtpInput,
-  parseVerifyEmailInput
+  parseVerifyEmailInput,
+  parseForgotPasswordInput,
+  parseResetPasswordInput
 } from "./auth.validation.js";
 import { REFRESH_TOKEN_COOKIE_NAME, getRefreshCookieOptions } from "./tokens.js";
-import { login, loginWithGoogle, logout, refresh, register, resendOtp, verifyEmail } from "./auth.service.js";
+import {
+  forgotPassword,
+  login,
+  loginWithGoogle,
+  logout,
+  refresh,
+  register,
+  resendOtp,
+  resetPassword,
+  verifyEmail
+} from "./auth.service.js";
 
 const getRequestContext = (req: Request) => ({
   userAgent: req.get("user-agent"),
@@ -87,6 +99,24 @@ export const logoutController = async (req: Request, res: Response, next: NextFu
     await logout(req.cookies?.[REFRESH_TOKEN_COOKIE_NAME] as string | undefined);
     clearRefreshCookie(res);
     res.status(200).json(successResponse({ loggedOut: true }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPasswordController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await forgotPassword(parseForgotPasswordInput(req.body));
+    res.status(200).json(successResponse(result));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPasswordController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await resetPassword(parseResetPasswordInput(req.body));
+    res.status(200).json(successResponse(result));
   } catch (error) {
     next(error);
   }
