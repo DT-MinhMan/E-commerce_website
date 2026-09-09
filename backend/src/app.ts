@@ -30,7 +30,11 @@ export const createApp = (config: AppConfig = getConfig()): Express => {
   app.use(
     cors({
       origin: (origin, callback) => {
-        if (!origin || origin === config.clientUrl) {
+        if (
+          !origin ||
+          origin === config.clientUrl ||
+          (config.nodeEnv === "development" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
+        ) {
           callback(null, true);
           return;
         }

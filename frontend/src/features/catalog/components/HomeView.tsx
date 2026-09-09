@@ -3,8 +3,12 @@ import { ProductCardWithCartAction } from "./ProductCardWithCartAction.js";
 import { useCategoriesQuery, useProductsQuery } from "../hooks/useCatalogQueries.js";
 import { HeroSlider } from "./HeroSlider.js";
 import { BrandHighlights } from "./BrandHighlights.js";
+import { FeaturedCollectionSection } from "./FeaturedCollectionSection.js";
 import { RoomInspirationGrid } from "./RoomInspirationGrid.js";
 import { AboutUsSection } from "./AboutUsSection.js";
+import { InstagramSection } from "./InstagramSection.js";
+import { BrandPhilosophyQuote } from "./BrandPhilosophyQuote.js";
+import { ScrollReveal } from "../../../components/ui/ScrollReveal.js";
 
 const getCategoryImage = (categoryName: string, categorySlug: string): string => {
   const nameLower = (categoryName + " " + categorySlug).toLowerCase();
@@ -22,78 +26,31 @@ export const HomeView = () => {
 
   return (
     <section className="home-page">
-      {/* 1. Dynamic Hero Banner Slider */}
+      {/* 1. Dynamic Hero Banner Slider (Parallax + Scroll Fade-out) */}
       <HeroSlider />
 
-      {/* 2. Brand Value & Service Commitments */}
+      {/* Brand Value & Service Commitments */}
       <BrandHighlights />
 
-      {/* 3. Room Inspiration Magazine Grid */}
-      <RoomInspirationGrid />
+      {/* 2. Featured Collection (Image Left x:-30 -> 0, 0.8s + Text Right x:30 -> 0, 0.8s, 0.15s delay) */}
+      <FeaturedCollectionSection />
 
-      {/* 4. Brand Story Section (Về ZenLiving) */}
-      <AboutUsSection />
-
-      {/* 4. Category Showcase with Rich Visual Cards */}
-      <section className="home-section">
-        <div className="section-heading-row">
-          <div className="section-heading">
-            <p className="eyebrow">Danh Mục Tuyển Chọn</p>
-            <h2 className="serif-title">
-              Khám Phá Theo Danh Mục
-            </h2>
+      {/* 3. Latest Products Section */}
+      <section className="home-section" aria-label="Sản phẩm mới nhất">
+        {/* Heading: fades in + slides up (y: 20 -> 0), 0.6s */}
+        <ScrollReveal direction="up" distance={20} duration={600}>
+          <div className="section-heading-row">
+            <div className="section-heading">
+              <p className="eyebrow">Just Arrived / Tuyển Chọn Mới</p>
+              <h2 className="serif-title">
+                Sản Phẩm Nổi Bật Vừa Cập Nhật
+              </h2>
+            </div>
+            <Link className="text-link" to="/products">
+              Xem Toàn Bộ &rarr;
+            </Link>
           </div>
-        </div>
-
-        {categoriesQuery.isLoading && (
-          <div className="category-grid">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div className="category-tile category-tile-skeleton" key={index}>
-                <span />
-                <span />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {categoriesQuery.isSuccess && categories.length > 0 && (
-          <div className="category-grid">
-            {categories.slice(0, 4).map((category) => (
-              <Link
-                className="category-card-item"
-                to={`/products?category=${category.slug}`}
-                key={category.id}
-              >
-                <div className="category-card-media">
-                  <img
-                    src={category.imageUrl || getCategoryImage(category.name, category.slug)}
-                    alt={category.name}
-                    loading="lazy"
-                  />
-                </div>
-                <div className="category-card-info">
-                  <h3>{category.name}</h3>
-                  <p>{category.description ?? "Khám phá danh mục các sản phẩm cao cấp."}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 5. Featured Products Showcase */}
-      <section className="home-section">
-        <div className="section-heading-row">
-          <div className="section-heading">
-            <p className="eyebrow">Sản Phẩm Độc Quyền</p>
-            <h2 className="serif-title">
-              Sản Phẩm Nổi Bật Vừa Cập Nhật
-            </h2>
-          </div>
-          <Link className="text-link" to="/products">
-            Xem Toàn Bộ &rarr;
-          </Link>
-        </div>
+        </ScrollReveal>
 
         {productsQuery.isLoading && (
           <div className="product-grid product-grid-featured">
@@ -110,19 +67,140 @@ export const HomeView = () => {
           </div>
         )}
 
+        {productsQuery.isError && (
+          <div className="panel" style={{ textAlign: "center", padding: "32px 16px" }}>
+            <p className="status-error">Không thể tải danh sách sản phẩm nổi bật.</p>
+            <button
+              type="button"
+              className="secondary-action"
+              style={{ marginTop: 8 }}
+              onClick={() => void productsQuery.refetch()}
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {productsQuery.isSuccess && products.length === 0 && (
+          <div className="panel" style={{ textAlign: "center", padding: "32px 16px" }}>
+            <p>Chưa có sản phẩm nào được cập nhật.</p>
+          </div>
+        )}
+
+        {/* Each product card animates individually (staggered) — fades in + slides up (y: 40 -> 0), 0.8s with index * 0.12s delay */}
         {productsQuery.isSuccess && products.length > 0 && (
           <div className="product-grid product-grid-featured">
-            {products.map((product) => (
-              <ProductCardWithCartAction
-                product={product}
-                categoryName={categories.find((category) => category.id === product.categoryId)?.name}
-                imageLoading="lazy"
+            {products.map((product, index) => (
+              <ScrollReveal
                 key={product.id}
-              />
+                direction="up"
+                distance={40}
+                duration={800}
+                delay={(index % 4) * 120}
+              >
+                <ProductCardWithCartAction
+                  product={product}
+                  categoryName={categories.find((category) => category.id === product.categoryId)?.name}
+                  imageLoading="lazy"
+                />
+              </ScrollReveal>
             ))}
           </div>
         )}
       </section>
+
+      {/* 4. Collections Grid (Category Showcase) */}
+      <section className="home-section" aria-label="Danh mục bộ sưu tập">
+        {/* Heading: fades in + slides up (y: 20 -> 0), 0.6s */}
+        <ScrollReveal direction="up" distance={20} duration={600}>
+          <div className="section-heading-row">
+            <div className="section-heading">
+              <p className="eyebrow">Browse By / Tuyển Chọn</p>
+              <h2 className="serif-title">
+                Khám Phá Theo Danh Mục
+              </h2>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        {categoriesQuery.isLoading && (
+          <div className="category-grid">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div className="category-tile category-tile-skeleton" key={index}>
+                <span />
+                <span />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {categoriesQuery.isSuccess && categories.length > 0 && (
+          <div className="category-grid">
+            {/* Each CollectionCard: fades in + slides up (y: 40 -> 0), 0.8s, staggered by index * 0.12s delay */}
+            {categories.slice(0, 4).map((category, index) => (
+              <ScrollReveal
+                key={category.id}
+                direction="up"
+                distance={40}
+                duration={800}
+                delay={(index % 4) * 120}
+              >
+                <Link
+                  className="category-card-item"
+                  to={`/products?category=${category.slug}`}
+                >
+                  <div className="category-card-media">
+                    <img
+                      src={category.imageUrl || getCategoryImage(category.name, category.slug)}
+                      alt={category.name}
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="category-card-info">
+                    <h3>{category.name}</h3>
+                    <p>{category.description ?? "Khám phá danh mục các sản phẩm cao cấp."}</p>
+                  </div>
+                </Link>
+              </ScrollReveal>
+            ))}
+          </div>
+        )}
+
+        {categoriesQuery.isError && (
+          <div className="panel" style={{ textAlign: "center", padding: "32px 16px" }}>
+            <p className="status-error">Không thể tải danh mục sản phẩm.</p>
+            <button
+              type="button"
+              className="secondary-action"
+              style={{ marginTop: 8 }}
+              onClick={() => void categoriesQuery.refetch()}
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* 5. About Us Section: Entire block fades in + slides up (y: 30 -> 0), 0.8s, with -100px rootMargin */}
+      <ScrollReveal
+        direction="up"
+        distance={30}
+        duration={800}
+        rootMargin="0px 0px -100px 0px"
+      >
+        <AboutUsSection />
+      </ScrollReveal>
+
+      {/* Room Inspiration Grid */}
+      <ScrollReveal distance={30} duration={800}>
+        <RoomInspirationGrid />
+      </ScrollReveal>
+
+      {/* 6. Instagram / Follow Us Section (Heading y: 20 -> 0, 0.6s | Tiles scale: 0.95 -> 1, 0.5s staggered 0.1s) */}
+      <InstagramSection />
+
+      {/* Brand Philosophy Quote Highlight */}
+      <BrandPhilosophyQuote />
     </section>
   );
 };
