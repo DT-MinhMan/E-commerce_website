@@ -1,251 +1,257 @@
-# Nền tảng Thương mại Điện tử MERN Fullstack (MERN E-Commerce Platform)
+# Fullstack TypeScript E-Commerce Platform
 
-Hệ thống E-Commerce Fullstack (Đơn cửa hàng - Single Vendor) hoàn chỉnh được xây dựng trên nền tảng **React, Node.js, Express, TypeScript, MongoDB và Stripe**. Dự án được thiết kế chuẩn kiến trúc Production, chú trọng vào trải nghiệm người dùng, tính an toàn dữ liệu giao dịch và khả năng mở rộng.
+A production-grade e-commerce application built with React 19, Node.js, Express, TypeScript, and MongoDB. The system features atomic inventory management via MongoDB Transactions, secure dual-token authentication, Stripe payment webhooks with idempotency protection, and an administrative fulfillment state machine.
 
----
+[Live Demo](https://mern-ecommerce-frontend.vercel.app) · [API Documentation (Swagger)](http://localhost:5000/api-docs) · [GitHub Repository](https://github.com/username/E-Commerce_Fullstack)
 
-## 🛠 Công nghệ sử dụng (Tech Stack)
+## 📑 Table of Contents
+- [Screenshots](#-screenshots)
+- [Technical Highlights](#-technical-highlights)
+- [Tech Stack](#️-tech-stack)
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Authentication](#-authentication)
+- [Payment & Inventory Flow](#-payment--inventory-flow)
+- [Order Flow](#-order-flow)
+- [API Documentation](#-api-documentation)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Testing](#-testing)
+- [Deployment & CI/CD](#-deployment--cicd)
+- [License](#-license)
 
-### **Frontend**
-- **Core**: React 19, TypeScript, Vite
-- **Quản lý State**:
-  - TanStack Query (React Query v5) – Quản lý Server State và caching
-  - Zustand – Quản lý Client State (Phiên đăng nhập / Authentication)
-- **Điều hướng & HTTP Client**: React Router v7, Axios
+## 📸 Screenshots
 
-### **Backend**
-- **Core**: Node.js, Express, TypeScript
-- **Cơ sở dữ liệu**: MongoDB, Mongoose ORM
-- **Bảo mật**: JWT Access Tokens (trong bộ nhớ) & Opaque Refresh Tokens (lưu trong HttpOnly Cookie), Bcryptjs, Helmet, Express Rate Limit
-- **Tích hợp dịch vụ**: Stripe API (Thanh toán), Cloudinary (Lưu trữ ảnh sản phẩm)
-- **Tài liệu API**: Swagger UI / OpenAPI 3.0
+| Storefront Desktop | Mobile Experience |
+| :---: | :---: |
+| ![Desktop Storefront](screenshots/home-desktop.png) | ![Mobile Storefront](screenshots/home-mobile.png) |
 
-### **DevOps & Testing**
-- **Container**: Docker Compose (chạy MongoDB Single-Node Replica Set `rs0` phục vụ MongoDB Transactions)
-- **Testing**: Vitest, Supertest, React Testing Library
-- **CI/CD & Deployment**: GitHub Actions, Vercel (Frontend), Render (Backend Docker Container), MongoDB Atlas
+## ⭐ Technical Highlights
 
----
+- **Atomic Inventory & MongoDB Transactions**: Decrements stock within multi-document transactions during webhook processing, using deterministic product ID sorting to eliminate database deadlocks.
+- **Webhook Idempotency & Fault Recovery**: Tracks provider event IDs via a dedicated model to prevent duplicate fulfillment; routes payment discrepancies to an explicit `PAYMENT_REVIEW` status.
+- **Dual-Token Authentication**: Short-lived in-memory JWT access tokens combined with rotated, HttpOnly, SameSite refresh token cookies and token-family revocation.
+- **Optimistic Concurrency Control**: Admin order transitions enforce expected current status to prevent race conditions and concurrent state overwrite conflicts.
+- **Layered TypeScript Architecture**: Strict domain separation across modular backend services and feature-based React frontend architecture.
+- **Automated Testing & CI/CD**: End-to-end type safety, unit and integration tests with Vitest, Supertest, and React Testing Library running on GitHub Actions.
 
-## ✨ Tính năng chính
+## 🛠️ Tech Stack
 
-### 🛒 Dành cho Khách hàng (Customer Storefront)
-- **Duyệt & Tìm kiếm Sản phẩm**: Xem danh sách sản phẩm với các bộ lọc theo danh mục, khoảng giá, từ khóa tìm kiếm, sắp xếp và phân trang trực tiếp trên URL search params.
-- **Chi tiết sản phẩm**: Hiển thị chi tiết thông tin, hình ảnh, trạng thái còn hàng/hết hàng.
-- **Giỏ hàng trực tuyến (Cart)**: Đồng bộ giỏ hàng với Server, tự động cập nhật đơn giá, tổng tiền và cảnh báo khi sản phẩm hết hàng hoặc bị thay đổi trạng thái.
-- **Đặt hàng & Thanh toán (Checkout & Stripe)**: Tạo đơn hàng snapshot không thể sửa đổi, tích hợp Stripe Hosted Checkout an toàn.
-- **Lịch sử đơn hàng**: Theo dõi trạng thái đơn hàng và thông tin thanh toán chi tiết.
+| Domain | Technologies |
+| :--- | :--- |
+| **Frontend** | React 19, TypeScript, Vite, TanStack Query v5, Zustand, React Router v7, Axios |
+| **Backend** | Node.js, Express, TypeScript, Mongoose (MongoDB ORM), Helmet, Express Rate Limit |
+| **Payments & Cloud** | Stripe API, MoMo API, Cloudinary (Image Management) |
+| **Testing** | Vitest, Supertest, React Testing Library |
+| **DevOps & Infra** | Docker Compose (MongoDB Replica Set `rs0`), GitHub Actions, Vercel, Render |
 
-### 🛡 Quản trị viên (Admin Dashboard)
-- **Quản lý sản phẩm & danh mục**: Thêm, sửa, ẩn/hiện danh mục và sản phẩm; tải ảnh sản phẩm lên Cloudinary.
-- **Quản lý kho hàng (Inventory)**: Cập nhật số lượng tồn kho theo thời gian thực.
-- **Quản lý đơn hàng**: Theo dõi danh sách đơn hàng, cập nhật trạng thái đơn hàng theo luồng State Machine nghiêm ngặt (chống xung đột trạng thái).
-- **Thống kê tổng quan (Dashboard Summary)**: Hiển thị báo cáo nhanh về doanh thu, số lượng đơn hàng và tình trạng tồn kho.
+## ✨ Features
 
-### 🔐 An toàn dữ liệu & Giao dịch (Transaction Safety)
-- **Atomic Inventory Decrement**: Sản phẩm chỉ bị khấu trừ tồn kho khi nhận được xác thực thành công từ **Stripe Webhook** (sử dụng MongoDB Transactions).
-- **Idempotent Webhooks**: Đảm bảo xử lý sự kiện webhook từ Stripe không bị trùng lặp.
-- **Xử lý ngoại lệ thanh toán**: Trường hợp thanh toán thành công nhưng sản phẩm vừa bị hết hàng, hệ thống tự động đưa đơn hàng vào trạng thái `PAYMENT_REVIEW` để Admin xử lý thủ công.
+### Customer
+- Product catalog browsing with search, multi-criteria filtering, price ranges, and URL-synced pagination.
+- Server-synchronized shopping cart with real-time price and stock validation.
+- Secure Stripe Checkout and MoMo gateway integrations with payment status polling.
+- Order history with itemized line snapshots and real-time delivery status tracking.
+- Email verification and password recovery flows.
 
----
+### Admin
+- Product catalog and category lifecycle management with Cloudinary image uploads.
+- Real-time inventory tracking and stock adjustments.
+- Order status fulfillment pipeline protected by strict transition rules.
+- Centralized dashboard displaying revenue metrics, order volumes, and low-stock alerts.
+- Dedicated review queue for flagged payment orders (`PAYMENT_REVIEW`).
 
-## 📁 Cấu trúc thư mục (Project Structure)
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    Client[React 19 SPA]
+    API[Express REST API]
+    DB[(MongoDB Replica Set)]
+    Stripe[Stripe Gateway]
+    Cloudinary[Cloudinary CDN]
+
+    Client -->|HTTP / JSON| API
+    API -->|Mongoose / Transactions| DB
+    Client -->|Redirect / Checkout| Stripe
+    Stripe -->|Webhooks| API
+    API -->|Asset Uploads| Cloudinary
+```
+
+- **Frontend**: Client-side single-page app utilizing TanStack Query for server cache management and Zustand for lightweight session state.
+- **Backend**: Modular REST API with centralized error handling, request validation, and rate limiting middleware.
+- **Data Layer**: MongoDB configured with a single-node replica set (`rs0`) to support ACID transactions across orders, payments, and inventory.
+- **Third-Party Services**: Asynchronous event-driven webhooks for payment processing and Cloudinary for media storage.
+
+## 🔐 Authentication
+
+Authentication uses a dual-token strategy to maximize security against XSS and CSRF:
+
+1. **Access Token**: Short-lived JWT (15 minutes) kept exclusively in frontend memory via Zustand; never stored in `localStorage` or `sessionStorage`.
+2. **Refresh Token**: Cryptographically random opaque token stored in an `httpOnly`, `SameSite=Lax` cookie scoped strictly to `/api/v1/auth`.
+3. **Rotation & Revocation**: Every refresh cycle issues a new token family member and revokes previous tokens. Replay detection invalidates compromised token families.
+4. **Role-Based Access Control (RBAC)**: Route middleware validates user roles (`CUSTOMER` vs `ADMIN`) before dispatching requests to controllers.
+
+> For deep architectural details, see [`docs/authentication-flow.md`](docs/authentication-flow.md).
+
+## 💳 Payment & Inventory Flow
+
+```text
+Customer Checkout
+       ↓
+Create Immutable Order & Pending Payment
+       ↓
+Redirect to Stripe Checkout Session
+       ↓
+Stripe Webhook (`checkout.session.completed`)
+       ↓
+Idempotency Check (`PaymentWebhookEvent`)
+       ↓
+MongoDB ACID Transaction:
+  ├── Check Stock Availability
+  ├── Atomic Inventory Decrement ($inc: -qty)
+  └── Update Order & Payment Status -> PAID
+       ↓ (If stock depleted during checkout)
+Mark Order as `PAYMENT_REVIEW` for Admin Intervention
+```
+
+- **Stock Reservation Policy**: Stock is not reserved upon checkout session creation. Instead, inventory is atomically decremented during webhook verification.
+- **Deadlock Avoidance**: Order line items are sorted by `productId` prior to executing transactional updates, guaranteeing deterministic lock acquisition.
+- **Fault Recovery**: If an order was paid but concurrent orders depleted the available stock, the order transitions to `PAYMENT_REVIEW` with full audit logs rather than failing silently.
+
+> For complete sequence diagrams, see [`docs/payment-flow.md`](docs/payment-flow.md).
+
+## 🔄 Order Flow
+
+Order progression follows a deterministic state machine:
+
+```text
+PENDING ──► PROCESSING ──► SHIPPED ──► COMPLETED
+   │             │             │
+   └──► CANCELLED └──► CANCELLED└──► RETURNED
+```
+
+- Transitions are enforced on the backend via a transition lookup matrix.
+- Updates require `expectedCurrentStatus` in the request payload; mismatched states return `409 ORDER_STATUS_CONFLICT` to prevent concurrent administrative overwrites.
+- Customer cancellations are only permitted while the order remains in `PENDING` state.
+
+## 🔌 API Documentation
+
+Complete interactive OpenAPI/Swagger documentation is available when running the backend:
+
+- **Swagger UI**: `http://localhost:5000/api-docs`
+- **Core Endpoints**: Auth (`/api/v1/auth`), Products (`/api/v1/products`), Categories (`/api/v1/categories`), Cart (`/api/v1/cart`), Orders (`/api/v1/orders`), Payments (`/api/v1/payments`), Admin (`/api/v1/admin`)
+- **Health Checks**: `GET /api/v1/health` (Liveness) and `GET /api/v1/ready` (Readiness check verifying database and payment services).
+
+## 📂 Project Structure
 
 ```text
 E-Commerce_Fullstack/
-├── backend/            # Express API Server (Node.js + TypeScript + Mongoose)
+├── backend/
 │   ├── src/
-│   │   ├── database/   # Database connection & seed scripts
-│   │   ├── middleware/ # Auth, Validation, Error Handling, Rate Limiting
-│   │   ├── modules/    # Auth, Users, Products, Categories, Cart, Orders, Payments...
-│   │   └── server.ts   # Entry point
-│   ├── test/           # Integration & Unit tests
-│   └── Dockerfile      # Production Dockerfile
-├── frontend/           # React Single Page Application (Vite + TypeScript)
+│   │   ├── common/        # Middleware (auth, error, rate-limit), logger, utilities
+│   │   ├── config/        # Environment and database connection configurations
+│   │   ├── database/      # Mongoose schemas, enums, indexes, and seed scripts
+│   │   ├── modules/       # Domain modules (auth, catalog, cart, orders, payments, admin)
+│   │   ├── app.ts         # Express application bootstrap
+│   │   └── server.ts      # Server entry point
+│   ├── test/              # Integration and unit test suites
+│   └── Dockerfile         # Production multi-stage build
+├── frontend/
 │   ├── src/
-│   │   ├── components/ # Shared UI Components
-│   │   ├── features/   # Auth, Catalog, Cart, Checkout, Orders, Admin features
-│   │   ├── hooks/      # TanStack Query & Custom hooks
-│   │   └── store/      # Zustand store
-├── docs/               # Chi tiết tài liệu kiến trúc & quy trình (Auth, Checkout, Payment...)
-└── docker-compose.yml  # Docker Compose cấu hình MongoDB Replica Set
+│   │   ├── components/    # Reusable design system UI elements
+│   │   ├── features/      # Feature modules (auth, catalog, cart, checkout, admin)
+│   │   ├── layouts/       # Storefront and admin layout wrappers
+│   │   ├── lib/           # API client (Axios) and TanStack Query client configuration
+│   │   └── routes/        # Application router definitions
+│   └── test/              # Frontend unit and component tests
+├── docs/                  # Architecture Decision Records (ADRs) and workflow specs
+├── screenshots/           # Storefront preview captures
+└── docker-compose.yml     # MongoDB Single-Node Replica Set service
 ```
 
----
+## 🚀 Getting Started
 
-## 🚀 Hướng dẫn Cài đặt & Chạy cục bộ (Quick Start)
-
-### **Yêu cầu môi trường**
+### Prerequisites
 - **Node.js**: v20+
 - **pnpm**: v9.15+
-- **Docker Desktop**: Cần thiết để khởi chạy MongoDB Replica Set
+- **Docker**: For running the MongoDB Replica Set
 
----
-
-### **Các bước thực hiện**
-
-#### 1. Clone dự án và cài đặt dependencies
+### 1. Clone and Install
 ```bash
 git clone https://github.com/username/E-Commerce_Fullstack.git
 cd E-Commerce_Fullstack
 pnpm install
 ```
 
-#### 2. Cấu hình biến môi trường (Environment Variables)
-
-Tạo file `.env` cho cả `backend` và `frontend` từ các file mẫu:
-
+### 2. Configure Environment Variables
+Copy the sample environment files:
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
-
-##### Cấu hình `backend/.env`:
+Key backend variables (`backend/.env`):
 ```env
-NODE_ENV=development
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/mern_ecommerce?replicaSet=rs0
 CLIENT_URL=http://localhost:5173
-LOG_LEVEL=info
-
-# JWT Secrets
-JWT_ACCESS_SECRET=your_long_random_jwt_access_secret_key
-JWT_ACCESS_EXPIRES_IN=15m
-REFRESH_TOKEN_EXPIRES_IN_DAYS=7
-
-# Cookie Settings
-COOKIE_SECURE=false
-COOKIE_SAME_SITE=lax
-
-# Stripe Test Mode Credentials
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
-STRIPE_SUCCESS_URL=http://localhost:5173/payment/success?orderId={ORDER_ID}
-STRIPE_CANCEL_URL=http://localhost:5173/payment/cancel?orderId={ORDER_ID}
-
-# Cloudinary (Quản lý ảnh)
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-CLOUDINARY_PRODUCT_FOLDER=ecommerce/products
-
-# Seed Data Credentials (Tài khoản mẫu)
-SEED_ADMIN_EMAIL=admin@example.com
-SEED_ADMIN_PASSWORD=ChangeMe123!
-SEED_CUSTOMER_EMAIL=customer@example.com
-SEED_CUSTOMER_PASSWORD=ChangeMe123!
+JWT_ACCESS_SECRET=your_jwt_secret
+STRIPE_SECRET_KEY=sk_test_your_key
+STRIPE_WEBHOOK_SECRET=whsec_your_secret
 ```
 
-##### Cấu hình `frontend/.env`:
-```env
-VITE_API_BASE_URL=http://localhost:5000/api/v1
-```
-
----
-
-#### 3. Khởi động MongoDB Replica Set với Docker
-Quá trình thanh toán sử dụng MongoDB Transactions nên cần chạy MongoDB dạng Single-Node Replica Set:
+### 3. Start Database and Seed
+MongoDB Transactions require a replica set:
 ```bash
+# Start MongoDB replica set
 docker compose up -d mongodb
-```
 
-Kích hoạt / Kiểm tra trạng thái Replica Set:
-```bash
-docker compose exec mongodb mongosh --quiet --eval "rs.status().ok"
-```
-*(Nếu kết quả trả về `1` là MongoDB đã sẵn sàng)*.
-
----
-
-#### 4. Khởi tạo CSDL & Dữ liệu mẫu (Database Indexing & Seeding)
-
-Đồng bộ các chỉ mục (Indexes) cho MongoDB:
-```bash
+# Sync database indexes and seed initial data
 pnpm db:indexes
-```
-
-Tạo dữ liệu tài khoản mẫu, danh mục và sản phẩm demo:
-```bash
 pnpm db:seed
 ```
 
-> 💡 **Tài khoản mặc định khởi tạo:**
-> - **Admin**: `admin@example.com` / `ChangeMe123!`
-> - **Customer**: `customer@example.com` / `ChangeMe123!`
-
----
-
-#### 5. Chạy ứng dụng
-
-Chạy đồng thời cả Backend và Frontend:
+### 4. Run Application
 ```bash
+# Start both backend and frontend concurrently
 pnpm dev
 ```
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:5000`
 
-Hoặc chạy riêng biệt:
-- **Backend API**: `pnpm dev:backend` (Chạy tại `http://localhost:5000`)
-- **Frontend App**: `pnpm dev:frontend` (Chạy tại `http://localhost:5173`)
+### Demo Credentials
+Pre-seeded accounts for review and evaluation:
 
----
+| Role | Email | Password | Access Area |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin@example.com` | `ChangeMe123!` | Admin Dashboard (`/admin`) |
+| **Customer** | `customer@example.com` | `ChangeMe123!` | Storefront & Checkout (`/`) |
 
-### 🔑 Tài khoản mẫu trải nghiệm (Demo Credentials)
+## 🧪 Testing
 
-Sau khi chạy lệnh `pnpm db:seed`, hệ thống đã cấu hình sẵn 2 tài khoản tương ứng với 2 vai trò người dùng (RBAC) để nhà tuyển dụng và người đánh giá tiện trải nghiệm:
+The repository maintains automated test suites covering critical business flows:
 
-| Vai trò | Email | Mật khẩu | Đường dẫn | Chức năng kiểm thử chính |
-| :--- | :--- | :--- | :--- | :--- |
-| 🛡️ **Admin** | `admin@example.com` | `ChangeMe123!` | `http://localhost:5173/login` | Tự động chuyển hướng vào **Dashboard Quản trị** (`/admin`): thống kê doanh thu, quản lý danh mục, thêm/sửa sản phẩm, kiểm soát tồn kho, cập nhật trạng thái đơn hàng. |
-| 🛒 **Customer** | `customer@example.com` | `ChangeMe123!` | `http://localhost:5173/login` | Tự động chuyển hướng về **Storefront** (`/`): duyệt sản phẩm, lọc/tìm kiếm, đồng bộ giỏ hàng, đặt hàng thanh toán (Stripe / MoMo Sandbox), xem lịch sử đơn hàng. |
+```bash
+# Run unit tests across all packages
+pnpm test
 
-> 📌 **Lưu ý:**
-> - Hai tài khoản trên được nạp tự động qua script [seed.ts](file:///backend/src/database/seed.ts).
-> - Bạn cũng có thể đăng ký tài khoản Customer mới trực tiếp tại trang Đăng ký (`/register`).
+# Run database integration tests (orders, payments, transactions)
+pnpm test:integration
 
----
-
-## 📖 Tài liệu API & Health Check
-
-### **Swagger API Documentation**
-Khi Backend đang chạy, bạn có thể truy cập giao diện kiểm thử API đầy đủ tại:
-```text
-http://localhost:5000/api-docs
+# Run type check and linting
+pnpm type-check
+pnpm lint
 ```
+- **Backend**: Vitest + Supertest testing controllers, services, database transactions, and auth security.
+- **Frontend**: Vitest + React Testing Library testing state stores, custom hooks, and UI interactions.
 
-### **Health & Readiness Endpoints**
-- `GET /api/v1/health` - Liveness check (Kiểm tra server sống/chết)
-- `GET /api/v1/ready` - Readiness check (Kiểm tra kết nối CSDL MongoDB & Stripe Config)
+## 🚀 Deployment & CI/CD
 
----
+- **Frontend**: Deployed on Vercel with client-side route rewrites (`vercel.json`).
+- **Backend**: Containerized via multi-stage Dockerfile and deployed on Render.
+- **Database**: Hosted on MongoDB Atlas.
+- **CI/CD Pipeline**: GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR to `main`, validating linting, TypeScript compilation, replica set database integration tests, and production builds.
 
-## 📜 Các lệnh hỗ trợ (Available Scripts)
+## 📄 License
 
-| Lệnh | Mô tả |
-| :--- | :--- |
-| `pnpm dev` | Chạy đồng thời Backend và Frontend ở chế độ Dev |
-| `pnpm dev:backend` | Chạy Backend API (với `tsx watch`) |
-| `pnpm dev:frontend` | Chạy Frontend SPA (với `Vite`) |
-| `pnpm lint` | Kiểm tra lỗi cú pháp/style (ESLint) cho toàn bộ dự án |
-| `pnpm type-check` | Kiểm tra kiểu dữ liệu TypeScript (`tsc`) |
-| `pnpm test` | Chạy các bài unit/integration test với Vitest |
-| `pnpm test:integration` | Chạy riêng các bài test tích hợp CSDL |
-| `pnpm build` | Biên dịch bản Production cho cả Backend và Frontend |
-| `pnpm db:indexes` | Đồng bộ chỉ mục MongoDB |
-| `pnpm db:seed` | Tạo dữ liệu mẫu (Idempotent Seed) |
-| `pnpm db:seed:reset` | Xóa và tạo lại dữ liệu mẫu |
-
----
-
-## 🌐 Triển khai (Deployment)
-
-Dự án đã được cấu hình sẵn sàng để triển khai lên các nền tảng Cloud:
-
-- **Frontend**: Triển khai trên **Vercel** (Đã cấu hình `vercel.json` rewrite SPA routes).
-- **Backend**: Triển khai trên **Render** (Sử dụng Multi-stage `Dockerfile` tối ưu dung lượng).
-- **Database**: Sử dụng **MongoDB Atlas** (Managed Cloud Database).
-- **CI/CD**: **GitHub Actions** tự động lint, type-check, test và build Docker Image khi tạo Pull Request hoặc Push vào nhánh `main`.
-
----
-
-## 📝 Giấy phép (License)
-
-Dự án được phát triển cho mục đích học tập và làm Portfolio. Bạn có thể tự do tham khảo và sử dụng code.
+This project is developed for educational and portfolio demonstration purposes under the MIT License.
