@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import { ToastContainer } from "../components/feedback/ToastContainer.js";
 import { AdminHeader } from "../components/layout/AdminHeader.js";
 import { StorefrontFooter } from "../components/layout/StorefrontFooter.js";
 import { StorefrontHeader } from "../components/layout/StorefrontHeader.js";
@@ -18,6 +19,7 @@ export const AppLayout = () => {
         <Outlet />
       </main>
       {!isAdmin && <StorefrontFooter categories={categories} />}
+      <ToastContainer />
     </div>
   );
 };

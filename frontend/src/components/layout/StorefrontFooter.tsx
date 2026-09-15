@@ -37,7 +37,7 @@ export const StorefrontFooter = ({ categories = [] }: StorefrontFooterProps) => 
 
       <nav className="footer-column" aria-label="Footer account navigation">
         <h3>Tài khoản &amp; Đơn hàng</h3>
-        <Link to="/account">Tài khoản của tôi</Link>
+        <Link to="/orders">Tài khoản của tôi</Link>
         <Link to="/orders">Lịch sử đơn hàng</Link>
         <Link to="/cart">Giỏ hàng</Link>
       </nav>

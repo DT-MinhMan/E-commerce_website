@@ -1,8 +1,15 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useToastStore } from "../../../components/feedback/toastStore.js";
 import { useAuthStore } from "../../auth/store/authStore.js";
 import { useAddCartItem } from "../../cart/hooks/useCartQueries.js";
 import { ProductCard } from "./ProductCard.js";
 import type { Product } from "../types.js";
+
+const formatPrice = (priceMinor: number, currency: string): string =>
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: currency || "VND"
+  }).format(priceMinor / (currency === "VND" ? 1 : 100));
 
 interface ProductCardWithCartActionProps {
   product: Product;
@@ -21,6 +28,8 @@ export const ProductCardWithCartAction = ({
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const addCartItem = useAddCartItem();
+  const addCartToast = useToastStore((state) => state.addCartToast);
+  const addErrorToast = useToastStore((state) => state.addErrorToast);
   const isAdding = addCartItem.isPending && addCartItem.variables?.productId === product.id;
 
   const addToCart = () => {
@@ -29,7 +38,22 @@ export const ProductCardWithCartAction = ({
       return;
     }
 
-    addCartItem.mutate({ productId: product.id, quantity: 1 });
+    addCartItem.mutate(
+      { productId: product.id, quantity: 1 },
+      {
+        onSuccess: () => {
+          addCartToast({
+            name: product.name,
+            imageUrl: product.images[0]?.url,
+            imageAlt: product.images[0]?.alt ?? product.name,
+            priceFormatted: formatPrice(product.priceMinor, product.currency)
+          });
+        },
+        onError: (error) => {
+          addErrorToast(error.message || "Đã xảy ra lỗi khi thêm sản phẩm vào giỏ hàng.");
+        }
+      }
+    );
   };
 
   return (

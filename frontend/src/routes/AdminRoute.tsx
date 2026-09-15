@@ -1,4 +1,4 @@
-﻿import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { Loading } from "../components/feedback/Loading.js";
 import { useAuthStore } from "../features/auth/store/authStore.js";
 
@@ -15,7 +15,7 @@ export const AdminRoute = () => {
   }
 
   if (user.role !== "ADMIN") {
-    return <Navigate to="/account" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

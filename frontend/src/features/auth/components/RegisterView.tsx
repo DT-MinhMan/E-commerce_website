@@ -20,7 +20,7 @@ export const RegisterView = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
 
   if (user) {
-    return <Navigate to="/account" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -88,7 +88,7 @@ export const RegisterView = () => {
 
         {config.googleClientId && (
           <>
-            <GoogleAuthButton onSuccess={() => navigate("/account")} />
+            <GoogleAuthButton onSuccess={() => navigate("/")} />
             <div style={{ display: "flex", alignItems: "center", margin: "16px 0", color: "var(--color-text-muted)", fontSize: "13px" }}>
               <div style={{ flex: 1, borderBottom: "1px solid #e5e7eb" }} />
               <span style={{ padding: "0 10px" }}>hoặc đăng ký với email</span>
@@ -129,7 +129,7 @@ export const RegisterView = () => {
       {showOtpModal && pendingEmail && (
         <OtpVerificationModal
           email={pendingEmail}
-          onSuccess={() => navigate("/account")}
+          onSuccess={() => navigate("/")}
           onClose={() => setShowOtpModal(false)}
         />
       )}

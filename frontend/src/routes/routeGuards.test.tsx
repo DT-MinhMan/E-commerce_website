@@ -73,14 +73,14 @@ describe("route guards", () => {
     renderWithProviders(
       <MemoryRouter initialEntries={["/admin"]}>
         <Routes>
-          <Route path="/account" element={<div>Account page</div>} />
+          <Route path="/" element={<div>Storefront page</div>} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<div>Admin page</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByText("Account page")).toBeInTheDocument();
+    expect(screen.getByText("Storefront page")).toBeInTheDocument();
 
     setUser("ADMIN");
     renderWithProviders(

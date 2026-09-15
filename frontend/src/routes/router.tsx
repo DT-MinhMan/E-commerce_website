@@ -1,6 +1,5 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppLayout } from "../layouts/AppLayout.js";
-import { AccountPage } from "../pages/account/AccountPage.js";
 import { LoginPage } from "../pages/account/LoginPage.js";
 import { ForgotPasswordPage } from "../pages/account/ForgotPasswordPage.js";
 import { OrderDetailPage } from "../pages/account/OrderDetailPage.js";
@@ -67,7 +66,7 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "account",
-            element: <AccountPage />
+            element: <Navigate to="/orders" replace />
           },
           {
             path: "cart",

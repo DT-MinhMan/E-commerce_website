@@ -1,28 +1,26 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useLogout } from "../../features/auth/hooks/useAuthQueries.js";
 import { useAuthStore } from "../../features/auth/store/authStore.js";
+import { ChangePasswordModal } from "../../features/auth/components/ChangePasswordModal.js";
 import { useCartQuery } from "../../features/cart/hooks/useCartQueries.js";
 import type { Category } from "../../features/catalog/types.js";
 import { SearchSuggestions } from "./SearchSuggestions.js";
+import { UserDropdown } from "./UserDropdown.js";
 
 interface StorefrontHeaderProps {
   categories?: Category[];
 }
 
 export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<"products" | "rooms" | null>(null);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
 
-  const drawerId = useId();
   const navigate = useNavigate();
   const location = useLocation();
-  const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
-  const logout = useLogout();
   const cartQuery = useCartQuery();
   const cartCount = cartQuery.data?.itemCount ?? 0;
 
@@ -48,20 +46,19 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
   }, [showSuggestions]);
 
   useEffect(() => {
-    if (!isMenuOpen) return;
+    if (!activeDropdown) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsMenuOpen(false);
+        setActiveDropdown(null);
       }
     };
 
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [isMenuOpen]);
+  }, [activeDropdown]);
 
-  const closeMenu = () => {
-    setIsMenuOpen(false);
+  const closeDropdown = () => {
     setActiveDropdown(null);
   };
 
@@ -113,19 +110,6 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
   return (
     <header className="app-header nhaxinh-header">
       <div className="header-bar nhaxinh-header-bar">
-        <button
-          type="button"
-          className="menu-toggle"
-          aria-label="Open navigation"
-          aria-controls={drawerId}
-          aria-expanded={isMenuOpen}
-          onClick={() => setIsMenuOpen(true)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-
         {/* 1. Logo ZenLiving Hình Ảnh */}
         <Link className="brand-mark nhaxinh-logo-box" to="/" aria-label="ZenLiving trang chủ">
           <img src="/images/logo.png" alt="ZenLiving" className="brand-logo-img" />
@@ -146,9 +130,9 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
             </Link>
             {activeDropdown === "products" && (
               <div className="nhaxinh-dropdown-menu">
-                <Link to="/products" onClick={closeMenu}>Tất cả sản phẩm</Link>
+                <Link to="/products" onClick={closeDropdown}>Tất cả sản phẩm</Link>
                 {categories.map((cat) => (
-                  <Link to={`/products?category=${cat.slug}`} key={cat.id} onClick={closeMenu}>
+                  <Link to={`/products?category=${cat.slug}`} key={cat.id} onClick={closeDropdown}>
                     {cat.name}
                   </Link>
                 ))}
@@ -167,11 +151,11 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
             </Link>
             {activeDropdown === "rooms" && (
               <div className="nhaxinh-dropdown-menu">
-                <Link to="/products?roomType=LIVING_ROOM" onClick={closeMenu}>Phòng Khách</Link>
-                <Link to="/products?roomType=BEDROOM" onClick={closeMenu}>Phòng Ngủ</Link>
-                <Link to="/products?roomType=DINING_ROOM" onClick={closeMenu}>Phòng Ăn</Link>
-                <Link to="/products?roomType=WORKING_ROOM" onClick={closeMenu}>Phòng Làm Việc</Link>
-                <Link to="/products?roomType=DECOR" onClick={closeMenu}>Trang Trí &amp; Đèn</Link>
+                <Link to="/products?roomType=LIVING_ROOM" onClick={closeDropdown}>Phòng Khách</Link>
+                <Link to="/products?roomType=BEDROOM" onClick={closeDropdown}>Phòng Ngủ</Link>
+                <Link to="/products?roomType=DINING_ROOM" onClick={closeDropdown}>Phòng Ăn</Link>
+                <Link to="/products?roomType=WORKING_ROOM" onClick={closeDropdown}>Phòng Làm Việc</Link>
+                <Link to="/products?roomType=DECOR" onClick={closeDropdown}>Trang Trí &amp; Đèn</Link>
               </div>
             )}
           </div>
@@ -212,66 +196,31 @@ export const StorefrontHeader = ({ categories = [] }: StorefrontHeaderProps) => 
               <line x1="3" y1="6" x2="21" y2="6" />
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
-            {cartCount > 0 && <strong className="cart-badge">{cartCount > 99 ? "99+" : cartCount}</strong>}
+            {cartCount > 0 && <strong className="cart-badge" aria-live="polite">{cartCount > 99 ? "99+" : cartCount}</strong>}
           </Link>
 
-          {/* Nút Đăng nhập / Tài khoản */}
-          <Link className="nhaxinh-account-btn" to={user ? "/account" : "/login"}>
-            <span>{user ? (user.fullName || "Tài khoản") : "Đăng nhập"}</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
-          </Link>
+          {/* Nút Đăng nhập / User Dropdown */}
+          {user ? (
+            <UserDropdown
+              user={user}
+              onOpenChangePassword={() => setShowChangePasswordModal(true)}
+            />
+          ) : (
+            <Link className="nhaxinh-account-btn" to="/login">
+              <span>Đăng nhập</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Mobile Drawer Navigation */}
-      {isMenuOpen && (
-        <>
-          <button type="button" className="drawer-backdrop" aria-label="Đóng menu" onClick={closeMenu} />
-          <aside className="mobile-drawer mobile-drawer-open" id={drawerId} role="dialog" aria-modal="true">
-            <div className="drawer-header">
-              <Link className="brand-mark nhaxinh-logo-box" to="/" onClick={closeMenu}>
-                <img src="/images/logo.png" alt="ZenLiving" className="brand-logo-img" />
-              </Link>
-              <button type="button" className="drawer-close" aria-label="Đóng menu" onClick={closeMenu}>
-                ✕
-              </button>
-            </div>
-            <nav className="drawer-nav" aria-label="Mobile navigation">
-              <Link to="/" className={isHomeActive ? "active" : ""} onClick={closeMenu}>TRANG CHỦ</Link>
-              <Link to="/products" className={isProductsActive && !searchParams.get("category") ? "active" : ""} onClick={closeMenu}>TẤT CẢ SẢN PHẨM</Link>
-              {categories.map((category) => (
-                <Link
-                  to={`/products?category=${category.slug}`}
-                  key={category.id}
-                  className={location.pathname.startsWith("/products") && searchParams.get("category") === category.slug ? "active" : ""}
-                  onClick={closeMenu}
-                >
-                  {category.name}
-                </Link>
-              ))}
-            </nav>
-            <div className="drawer-account">
-              {user ? (
-                <>
-                  <Link className="secondary-action" to="/account" onClick={closeMenu}>Tài khoản của tôi</Link>
-                  {user.role === "ADMIN" && (
-                    <Link className="secondary-action" to="/admin" onClick={closeMenu}>Trang Quản trị</Link>
-                  )}
-                  <button type="button" className="secondary-action" onClick={() => logout.mutate()} disabled={status === "loading"}>
-                    Đăng xuất
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link className="primary-link" to="/login" onClick={closeMenu}>Đăng nhập</Link>
-                  <Link className="secondary-action" to="/register" onClick={closeMenu}>Tạo tài khoản</Link>
-                </>
-              )}
-            </div>
-          </aside>
-        </>
+      {user && (
+        <ChangePasswordModal
+          isOpen={showChangePasswordModal}
+          onClose={() => setShowChangePasswordModal(false)}
+        />
       )}
     </header>
   );

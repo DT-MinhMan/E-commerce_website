@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useToastStore } from "../../../components/feedback/toastStore.js";
 import { useCategoriesQuery, useProductDetailQuery } from "../hooks/useCatalogQueries.js";
 import { useAddCartItem } from "../../cart/hooks/useCartQueries.js";
 import { useAuthStore } from "../../auth/store/authStore.js";
@@ -17,6 +18,8 @@ export const ProductDetailView = () => {
   const productQuery = useProductDetailQuery(slug);
   const categoriesQuery = useCategoriesQuery();
   const addCartItem = useAddCartItem();
+  const addCartToast = useToastStore((state) => state.addCartToast);
+  const addErrorToast = useToastStore((state) => state.addErrorToast);
 
   if (productQuery.isLoading) {
     return (
@@ -64,7 +67,22 @@ export const ProductDetailView = () => {
       return;
     }
 
-    addCartItem.mutate({ productId: product.id, quantity: 1 });
+    addCartItem.mutate(
+      { productId: product.id, quantity: 1 },
+      {
+        onSuccess: () => {
+          addCartToast({
+            name: product.name,
+            imageUrl: image?.url,
+            imageAlt: image?.alt ?? product.name,
+            priceFormatted: formatPrice(product.priceMinor, product.currency)
+          });
+        },
+        onError: (error) => {
+          addErrorToast(error.message || "Đã xảy ra lỗi khi thêm sản phẩm vào giỏ hàng.");
+        }
+      }
+    );
   };
 
   return (
