@@ -80,6 +80,8 @@ describe("ProductDetailView", () => {
       disconnect: vi.fn()
     }));
 
+    window.scrollTo = vi.fn();
+
     vi.mocked(useAuthStore).mockImplementation(((selector: (state: unknown) => unknown) =>
       selector({ user: { id: "u-1", email: "user@example.com" } })
     ) as unknown as typeof useAuthStore);
@@ -216,5 +218,23 @@ describe("ProductDetailView", () => {
 
     const addToCartBtn = screen.getByRole("button", { name: "Hết hàng" });
     expect(addToCartBtn).toBeDisabled();
+  });
+
+  it("renders skeleton loading state when product is loading", () => {
+    vi.mocked(useProductDetailQuery).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false
+    } as unknown as ReturnType<typeof useProductDetailQuery>);
+
+    renderWithProviders(
+      <MemoryRouter>
+        <ProductDetailView />
+      </MemoryRouter>
+    );
+
+    const skeleton = screen.getByRole("status", { name: "Đang tải thông tin sản phẩm" });
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveAttribute("aria-busy", "true");
   });
 });

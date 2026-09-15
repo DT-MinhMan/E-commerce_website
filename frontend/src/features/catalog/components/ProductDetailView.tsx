@@ -6,7 +6,10 @@ import { useAddCartItem } from "../../cart/hooks/useCartQueries.js";
 import { useCategoriesQuery, useProductDetailQuery, useProductsQuery } from "../hooks/useCatalogQueries.js";
 import { ProductCardWithCartAction } from "./ProductCardWithCartAction.js";
 import { ProductGallery } from "./ProductGallery.js";
+import { ProductDetailSkeleton } from "./ProductDetailSkeleton.js";
 import { ROOM_TYPE_LABELS } from "../types.js";
+
+export { ProductDetailSkeleton };
 
 const formatPrice = (priceMinor: number, currency: string): string =>
   new Intl.NumberFormat("vi-VN", {
@@ -76,6 +79,13 @@ export const ProductDetailView = () => {
     return () => observer.disconnect();
   }, [isOutOfStock, product?.id]);
 
+  // Scroll to top whenever slug changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [slug]);
+
   // Adjust quantity if stock is lower than current quantity
   useEffect(() => {
     if (product && product.stockQuantity > 0 && quantity > product.stockQuantity) {
@@ -84,13 +94,7 @@ export const ProductDetailView = () => {
   }, [product, quantity]);
 
   if (productQuery.isLoading) {
-    return (
-      <div className="product-detail-container">
-        <section className="panel">
-          <p>Đang tải thông tin sản phẩm...</p>
-        </section>
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (productQuery.isError) {
@@ -228,8 +232,6 @@ export const ProductDetailView = () => {
               </span>
             )}
           </div>
-
-          <p className="product-description-snippet">{product.description}</p>
 
           {/* Quantity Selector */}
           {!isOutOfStock && (
