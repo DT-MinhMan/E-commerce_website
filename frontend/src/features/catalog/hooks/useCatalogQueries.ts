@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getProductBySlug, listCategories, listProducts } from "../services/catalogService.js";
 import type { ApiError } from "../../../lib/apiClient.js";
 import type { Category, Product, ProductListParams, ProductListResult } from "../types.js";
@@ -22,10 +22,11 @@ export const useCategoriesQuery = () =>
     queryFn: ({ signal }) => listCategories(signal)
   });
 
-export const useProductsQuery = (params: ProductListParams) =>
+export const useProductsQuery = (params: ProductListParams, options?: { enabled?: boolean }) =>
   useQuery<ProductListResult, ApiError>({
     queryKey: productKeys.list(params),
-    queryFn: ({ signal }) => listProducts(params, signal)
+    queryFn: ({ signal }) => listProducts(params, signal),
+    enabled: options?.enabled
   });
 
 export const useProductDetailQuery = (slug: string) =>
