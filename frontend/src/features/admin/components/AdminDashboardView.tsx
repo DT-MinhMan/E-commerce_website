@@ -1,11 +1,6 @@
 import { Link } from "react-router-dom";
+import { formatPrice } from "../../../lib/formatters.js";
 import { useAdminDashboardSummaryQuery } from "../hooks/useAdminQueries.js";
-
-const formatPrice = (priceMinor: number, currency: string): string =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: currency || "VND"
-  }).format(priceMinor / (currency === "VND" ? 1 : 100));
 
 const getStatusPillClass = (status: string): string => {
   const lower = status.toLowerCase();
@@ -71,7 +66,6 @@ export const AdminDashboardView = () => {
         <div className="admin-hero-text">
           <span className="admin-hero-eyebrow">ZenLiving Admin Portal</span>
           <h2>Tổng quan Hệ thống</h2>
-          <p>Theo dõi chỉ số kinh doanh, đơn hàng phát sinh và cảnh báo tồn kho thời gian thực.</p>
         </div>
       </div>
 
@@ -135,7 +129,6 @@ export const AdminDashboardView = () => {
           <div className="panel-title-bar">
             <div>
               <h3>Đơn hàng theo Trạng thái</h3>
-              <p className="panel-subtitle">Phân bổ số lượng đơn hàng theo từng giai đoạn xử lý</p>
             </div>
             <Link to="/admin/orders" className="panel-link">
               Xem tất cả đơn
@@ -169,7 +162,6 @@ export const AdminDashboardView = () => {
           <div className="panel-title-bar">
             <div>
               <h3>Cảnh báo Tồn kho</h3>
-              <p className="panel-subtitle">Danh sách sản phẩm sắp hết hàng cần nhập bù</p>
             </div>
             <Link to="/admin/products" className="panel-link">
               Quản lý sản phẩm

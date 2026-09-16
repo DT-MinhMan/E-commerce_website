@@ -49,7 +49,7 @@ const testOrder = (overrides: Partial<Order> = {}): Order => ({
   subtotalMinor: 1000,
   shippingFeeMinor: 0,
   totalMinor: 1000,
-  currency: "USD",
+  currency: "VND",
   orderStatus: "PROCESSING",
   paymentStatus: "PAID",
   paidAt: "2026-08-01T00:00:00.000Z",
@@ -65,7 +65,7 @@ const testCart = (itemCount: number): Cart => ({
   items: [],
   itemCount,
   subtotalMinor: itemCount * 1000,
-  currency: "USD"
+  currency: "VND"
 });
 
 const createWrapper = (queryClient = createTestQueryClient()) => {
@@ -125,7 +125,7 @@ describe("query cache behavior", () => {
           orderId: "order-1",
           status: "PAID",
           amountMinor: 1000,
-          currency: "USD",
+          currency: "VND",
           provider: "STRIPE",
           providerCheckoutSessionId: "cs_test",
           providerPaymentId: "pi_test",
@@ -148,7 +148,7 @@ describe("query cache behavior", () => {
           orderId: "order-2",
           status: "PENDING",
           amountMinor: 1000,
-          currency: "USD",
+          currency: "VND",
           provider: "STRIPE",
           providerCheckoutSessionId: "cs_test",
           providerPaymentId: null,

@@ -39,7 +39,7 @@ const createProduct = async (
     description: "A compact keyboard with tactile switches.",
     categoryId: category._id,
     priceMinor: overrides.priceMinor ?? 8999,
-    currency: overrides.currency ?? "USD",
+    currency: overrides.currency ?? "VND",
     stockQuantity: overrides.stockQuantity ?? 10,
     status: overrides.status ?? "ACTIVE",
     images: [{ url: "https://example.com/keyboard.png", alt: "Keyboard" }]
@@ -67,7 +67,7 @@ describe("cart API", () => {
       items: [],
       itemCount: 0,
       subtotalMinor: 0,
-      currency: "USD"
+      currency: "VND"
     });
   });
 
@@ -95,7 +95,7 @@ describe("cart API", () => {
       slug: product.slug,
       name: product.name,
       unitPriceMinor: 8999,
-      currency: "USD",
+      currency: "VND",
       quantity: 2,
       lineTotalMinor: 17998,
       stockQuantity: 10,
@@ -170,13 +170,13 @@ describe("cart API", () => {
 
   it("rejects adding products with a different currency", async () => {
     const token = customerToken();
-    const usdProduct = await createProduct({ currency: "USD" });
+    const vndProduct = await createProduct({ currency: "VND" });
     const eurProduct = await createProduct({ currency: "EUR" });
 
     await request(app)
       .post("/api/v1/cart/items")
       .set("Authorization", `Bearer ${token}`)
-      .send({ productId: usdProduct._id.toString(), quantity: 1 })
+      .send({ productId: vndProduct._id.toString(), quantity: 1 })
       .expect(200);
 
     const mismatch = await request(app)

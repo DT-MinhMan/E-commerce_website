@@ -13,7 +13,8 @@
     "test:integration": "vitest run test/integration",
     "db:indexes": "tsx src/database/syncIndexes.ts",
     "db:seed": "tsx src/database/seed.ts",
-    "db:seed:reset": "tsx src/database/seed.ts --reset --confirm"
+    "db:seed:reset": "tsx src/database/seed.ts --reset --confirm",
+    "db:sync-vnd": "tsx src/database/syncVndCurrency.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

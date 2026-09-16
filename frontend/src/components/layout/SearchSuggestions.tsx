@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { formatPrice } from "../../lib/formatters.js";
 import { listProducts } from "../../features/catalog/services/catalogService.js";
 import type { Product } from "../../features/catalog/types.js";
-
-const formatPrice = (priceMinor: number, currency: string): string =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: currency || "VND"
-  }).format(priceMinor / (currency === "VND" ? 1 : 100));
 
 interface SearchSuggestionsProps {
   query: string;

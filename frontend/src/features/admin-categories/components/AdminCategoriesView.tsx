@@ -14,7 +14,6 @@ export const AdminCategoriesView = () => {
             <Link to="/admin">Admin</Link> / <span>Danh mục</span>
           </div>
           <h2>Quản lý Danh mục</h2>
-          <p className="admin-header-desc">Tạo và quản lý danh mục sản phẩm đồ nội thất cửa hàng.</p>
         </div>
         <Link className="admin-btn primary" to="/admin/categories/new">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

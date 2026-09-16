@@ -7,15 +7,10 @@ import { useCategoriesQuery, useProductDetailQuery, useProductsQuery } from "../
 import { ProductCardWithCartAction } from "./ProductCardWithCartAction.js";
 import { ProductGallery } from "./ProductGallery.js";
 import { ProductDetailSkeleton } from "./ProductDetailSkeleton.js";
+import { formatPrice } from "../../../lib/formatters.js";
 import { ROOM_TYPE_LABELS } from "../types.js";
 
 export { ProductDetailSkeleton };
-
-const formatPrice = (priceMinor: number, currency: string): string =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: currency || "VND"
-  }).format(priceMinor / (currency === "VND" ? 1 : 100));
 
 type TabKey = "description" | "warranty" | "shipping";
 

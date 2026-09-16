@@ -1,12 +1,6 @@
 import { Link } from "react-router-dom";
+import { formatPrice } from "../../../lib/formatters.js";
 import type { Product } from "../types.js";
-
-const formatPrice = (priceMinor: number, currency: string): string => {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: currency || "VND"
-  }).format(priceMinor / (currency === "VND" ? 1 : 100));
-};
 
 interface ProductCardProps {
   product: Product;

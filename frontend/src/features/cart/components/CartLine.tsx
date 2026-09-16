@@ -1,7 +1,7 @@
 import { type FormEvent, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useRemoveCartItem, useUpdateCartItem } from "../hooks/useCartQueries.js";
-import { formatCartPrice } from "./cartFormat.js";
+import { formatPrice } from "../../../lib/formatters.js";
 import type { CartItem } from "../types.js";
 
 interface CartLineProps {
@@ -56,7 +56,7 @@ export const CartLine = ({ item }: CartLineProps) => {
         <h3 className="cart-item-name">
           {item.slug ? <Link to={`/products/${item.slug}`}>{item.name}</Link> : item.name}
         </h3>
-        <p className="cart-item-unit-price">{formatCartPrice(item.unitPriceMinor, item.currency)} / sản phẩm</p>
+        <p className="cart-item-unit-price">{formatPrice(item.unitPriceMinor, item.currency)} / sản phẩm</p>
         <span className={item.isAvailable ? "stock-badge available" : "stock-badge unavailable"}>
           {item.isAvailable ? `Còn ${item.stockQuantity} sản phẩm` : "Tạm hết hàng"}
         </span>
@@ -116,7 +116,7 @@ export const CartLine = ({ item }: CartLineProps) => {
 
       <div className="cart-item-total">
         <span className="total-label">Tổng cộng</span>
-        <span className="total-value">{formatCartPrice(item.lineTotalMinor, item.currency)}</span>
+        <span className="total-value">{formatPrice(item.lineTotalMinor, item.currency)}</span>
       </div>
     </article>
   );

@@ -52,7 +52,7 @@ const createProduct = async (
     description: "A compact keyboard with tactile switches.",
     categoryId: category._id,
     priceMinor: overrides.priceMinor ?? 8999,
-    currency: overrides.currency ?? "USD",
+    currency: overrides.currency ?? "VND",
     stockQuantity: overrides.stockQuantity ?? 10,
     status: overrides.status ?? "ACTIVE",
     images: [{ url: "https://example.com/keyboard.png", alt: "Keyboard" }]
@@ -116,7 +116,7 @@ describe("orders API", () => {
       subtotalMinor: 10000,
       shippingFeeMinor: 0,
       totalMinor: 10000,
-      currency: "USD",
+      currency: "VND",
       orderStatus: "PENDING",
       paymentStatus: "PENDING",
       shippingAddress
@@ -136,7 +136,7 @@ describe("orders API", () => {
       userId,
       provider: "COD",
       amountMinor: 10000,
-      currency: "USD",
+      currency: "VND",
       status: "PENDING"
     });
     expect((await CartModel.findOne({ userId }).lean().exec())?.items).toEqual([]);
@@ -314,7 +314,7 @@ describe("orders API", () => {
       subtotalMinor: 2400,
       shippingFeeMinor: 0,
       totalMinor: 2400,
-      currency: "USD",
+      currency: "VND",
       orderStatus: "PROCESSING",
       paymentStatus: "PAID",
       paidAt: new Date()
@@ -364,7 +364,7 @@ describe("orders API", () => {
       subtotalMinor: 1000,
       shippingFeeMinor: 0,
       totalMinor: 1000,
-      currency: "USD",
+      currency: "VND",
       orderStatus: "PENDING",
       paymentStatus: "PENDING"
     });
@@ -401,7 +401,7 @@ describe("orders API", () => {
       subtotalMinor: 4000,
       shippingFeeMinor: 0,
       totalMinor: 4000,
-      currency: "USD",
+      currency: "VND",
       orderStatus: "PROCESSING",
       paymentStatus: "PAID",
       paidAt: new Date()
@@ -411,7 +411,7 @@ describe("orders API", () => {
       userId,
       provider: "STRIPE",
       amountMinor: 4000,
-      currency: "USD",
+      currency: "VND",
       status: "PAID",
       paidAt: new Date()
     });
@@ -434,7 +434,7 @@ describe("orders API", () => {
       subtotalMinor: 2000,
       shippingFeeMinor: 0,
       totalMinor: 2000,
-      currency: "USD",
+      currency: "VND",
       orderStatus: "PENDING",
       paymentStatus: "PENDING"
     });
@@ -443,7 +443,7 @@ describe("orders API", () => {
       userId,
       provider: "COD",
       amountMinor: 2000,
-      currency: "USD",
+      currency: "VND",
       status: "PENDING"
     });
 
@@ -484,7 +484,7 @@ describe("orders API", () => {
         subtotalMinor: 2000,
         shippingFeeMinor: 0,
         totalMinor: 2000,
-        currency: "USD",
+        currency: "VND",
         orderStatus: "PENDING",
         paymentStatus: "PENDING"
       });
@@ -524,7 +524,7 @@ describe("orders API", () => {
         subtotalMinor: 2000,
         shippingFeeMinor: 0,
         totalMinor: 2000,
-        currency: "USD",
+        currency: "VND",
         orderStatus: "PENDING",
         paymentStatus: "PENDING"
       });
@@ -558,7 +558,7 @@ describe("orders API", () => {
         subtotalMinor: 2000,
         shippingFeeMinor: 0,
         totalMinor: 2000,
-        currency: "USD",
+        currency: "VND",
         orderStatus: "PROCESSING",
         paymentStatus: "PENDING"
       });
@@ -592,7 +592,7 @@ describe("orders API", () => {
         subtotalMinor: 2000,
         shippingFeeMinor: 0,
         totalMinor: 2000,
-        currency: "USD",
+        currency: "VND",
         orderStatus: "PENDING",
         paymentStatus: "PAID"
       });
@@ -626,7 +626,7 @@ describe("orders API", () => {
         subtotalMinor: 2000,
         shippingFeeMinor: 0,
         totalMinor: 2000,
-        currency: "USD",
+        currency: "VND",
         orderStatus: "CANCELLED",
         paymentStatus: "PENDING",
         cancelledAt: new Date()

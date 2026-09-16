@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
+import { formatPrice } from "../../../lib/formatters.js";
 import { useCartQuery } from "../../cart/hooks/useCartQueries.js";
 import { useCheckout } from "../../orders/hooks/useOrderQueries.js";
 import type { ShippingAddressInput } from "../../orders/types.js";
@@ -13,30 +14,24 @@ const emptyAddress: ShippingAddressInput = {
   city: "",
   stateOrProvince: "",
   postalCode: "",
-  countryCode: "US"
+  countryCode: "VN"
 };
-
-const formatPrice = (priceMinor: number, currency: string): string =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency
-  }).format(priceMinor / 100);
 
 const validateAddress = (address: ShippingAddressInput): string | null => {
   if (!address.recipientName.trim()) {
-    return "Recipient name is required.";
+    return "Vui lòng nhập họ và tên người nhận.";
   }
 
   if (!address.phone.trim()) {
-    return "Phone is required.";
+    return "Vui lòng nhập số điện thoại liên hệ.";
   }
 
   if (!address.addressLine1.trim() || !address.city.trim() || !address.stateOrProvince.trim() || !address.postalCode.trim()) {
-    return "Shipping address is incomplete.";
+    return "Vui lòng điền đầy đủ thông tin địa chỉ giao hàng.";
   }
 
   if (!/^[A-Za-z]{2}$/.test(address.countryCode.trim())) {
-    return "Country code must be two letters.";
+    return "Mã quốc gia phải gồm 2 ký tự (VD: VN).";
   }
 
   return null;
@@ -97,7 +92,7 @@ export const CheckoutPageView = () => {
     return (
       <section className="checkout-page checkout-loading-state">
         <div className="checkout-spinner" />
-        <p>Loading your checkout details...</p>
+        <p>Đang tải thông tin thanh toán...</p>
       </section>
     );
   }
@@ -105,10 +100,10 @@ export const CheckoutPageView = () => {
   if (cartQuery.isError) {
     return (
       <section className="checkout-page checkout-error-state panel">
-        <h2>Unable to load checkout</h2>
+        <h2>Không thể tải thông tin thanh toán</h2>
         <p className="status-error">{cartQuery.error.message}</p>
         <button type="button" className="primary-action" onClick={() => void cartQuery.refetch()}>
-          Retry Loading
+          Thử lại
         </button>
       </section>
     );
@@ -127,10 +122,10 @@ export const CheckoutPageView = () => {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          Back to Shopping Cart
+          Quay lại giỏ hàng
         </Link>
         <div className="checkout-title-area">
-          <h1 className="checkout-title">Checkout</h1>
+          <h1 className="checkout-title">Thanh toán</h1>
         </div>
       </div>
 
@@ -143,12 +138,12 @@ export const CheckoutPageView = () => {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <div>
-              <h3>Cart items require attention</h3>
-              <p className="status-error">Some items in your cart are currently out of stock or unavailable.</p>
+              <h3>Sản phẩm trong giỏ hàng cần chú ý</h3>
+              <p className="status-error">Một số sản phẩm trong giỏ hàng hiện đã hết hàng hoặc không khả dụng.</p>
             </div>
           </div>
           <Link className="primary-action" to="/cart">
-            Return to Cart
+            Quay lại giỏ hàng
           </Link>
         </section>
       )}
@@ -168,17 +163,17 @@ export const CheckoutPageView = () => {
                     </svg>
                   </span>
                   <div>
-                    <h3>1. Shipping Address</h3>
-                    <p className="section-desc">Enter the location where you want your order delivered.</p>
+                    <h3>1. Địa chỉ giao hàng</h3>
+                    <p className="section-desc">Nhập địa chỉ nơi bạn muốn nhận đơn hàng.</p>
                   </div>
                 </div>
 
                 <div className="form-fields">
                   <div className="form-field">
-                    <label htmlFor="recipientName">Full Name *</label>
+                    <label htmlFor="recipientName">Họ và tên người nhận *</label>
                     <input
                       id="recipientName"
-                      placeholder="e.g. John Doe"
+                      placeholder="VD: Nguyễn Văn A"
                       value={shippingAddress.recipientName}
                       onChange={(event) => updateField("recipientName", event.target.value)}
                       autoComplete="name"
@@ -187,10 +182,10 @@ export const CheckoutPageView = () => {
                   </div>
 
                   <div className="form-field">
-                    <label htmlFor="phone">Phone Number *</label>
+                    <label htmlFor="phone">Số điện thoại liên hệ *</label>
                     <input
                       id="phone"
-                      placeholder="e.g. +1 555-0199 or 0912345678"
+                      placeholder="VD: 0912345678"
                       value={shippingAddress.phone}
                       onChange={(event) => updateField("phone", event.target.value)}
                       autoComplete="tel"
@@ -199,10 +194,10 @@ export const CheckoutPageView = () => {
                   </div>
 
                   <div className="form-field">
-                    <label htmlFor="addressLine1">Address Line 1 *</label>
+                    <label htmlFor="addressLine1">Địa chỉ chi tiết (Số nhà, tên đường) *</label>
                     <input
                       id="addressLine1"
-                      placeholder="Street address, P.O. box, company name"
+                      placeholder="Số nhà, tên đường, khu phố..."
                       value={shippingAddress.addressLine1}
                       onChange={(event) => updateField("addressLine1", event.target.value)}
                       autoComplete="address-line1"
@@ -211,10 +206,10 @@ export const CheckoutPageView = () => {
                   </div>
 
                   <div className="form-field">
-                    <label htmlFor="addressLine2">Address Line 2 (Optional)</label>
+                    <label htmlFor="addressLine2">Địa chỉ bổ sung (Tùy chọn)</label>
                     <input
                       id="addressLine2"
-                      placeholder="Apartment, suite, unit, building, floor, etc."
+                      placeholder="Căn hộ, số phòng, tầng, tòa nhà..."
                       value={shippingAddress.addressLine2 ?? ""}
                       onChange={(event) => updateField("addressLine2", event.target.value)}
                       autoComplete="address-line2"
@@ -223,10 +218,10 @@ export const CheckoutPageView = () => {
 
                   <div className="form-row">
                     <div className="form-field">
-                      <label htmlFor="city">City / District *</label>
+                      <label htmlFor="city">Quận / Huyện *</label>
                       <input
                         id="city"
-                        placeholder="e.g. San Francisco or District 1"
+                        placeholder="VD: Quận 1, Cầu Giấy..."
                         value={shippingAddress.city}
                         onChange={(event) => updateField("city", event.target.value)}
                         autoComplete="address-level2"
@@ -234,10 +229,10 @@ export const CheckoutPageView = () => {
                       />
                     </div>
                     <div className="form-field">
-                      <label htmlFor="stateOrProvince">State / Province *</label>
+                      <label htmlFor="stateOrProvince">Tỉnh / Thành phố *</label>
                       <input
                         id="stateOrProvince"
-                        placeholder="e.g. California or Ho Chi Minh"
+                        placeholder="VD: TP. Hồ Chí Minh, Hà Nội..."
                         value={shippingAddress.stateOrProvince}
                         onChange={(event) => updateField("stateOrProvince", event.target.value)}
                         autoComplete="address-level1"
@@ -248,10 +243,10 @@ export const CheckoutPageView = () => {
 
                   <div className="form-row">
                     <div className="form-field">
-                      <label htmlFor="postalCode">Postal Code *</label>
+                      <label htmlFor="postalCode">Mã bưu điện *</label>
                       <input
                         id="postalCode"
-                        placeholder="e.g. 94103 or 700000"
+                        placeholder="VD: 700000"
                         value={shippingAddress.postalCode}
                         onChange={(event) => updateField("postalCode", event.target.value)}
                         autoComplete="postal-code"
@@ -259,10 +254,10 @@ export const CheckoutPageView = () => {
                       />
                     </div>
                     <div className="form-field">
-                      <label htmlFor="countryCode">Country Code (2 letters) *</label>
+                      <label htmlFor="countryCode">Mã quốc gia (2 ký tự) *</label>
                       <input
                         id="countryCode"
-                        placeholder="US, VN, CA, GB..."
+                        placeholder="VN, US, JP..."
                         value={shippingAddress.countryCode}
                         onChange={(event) => updateField("countryCode", event.target.value)}
                         autoComplete="country"
@@ -283,8 +278,8 @@ export const CheckoutPageView = () => {
                     </svg>
                   </span>
                   <div>
-                    <h3>2. Payment Method</h3>
-                    <p className="section-desc">Select how you would like to pay for your purchase.</p>
+                    <h3>2. Phương thức thanh toán</h3>
+                    <p className="section-desc">Chọn phương thức thanh toán phù hợp cho đơn hàng.</p>
                   </div>
                 </div>
 
@@ -300,8 +295,8 @@ export const CheckoutPageView = () => {
                     <div className="payment-card-body">
                       <span className="payment-card-icon">💵</span>
                       <div>
-                        <strong>Cash on Delivery (COD)</strong>
-                        <p>Pay with cash when your package is delivered.</p>
+                        <strong>Thanh toán khi nhận hàng (COD)</strong>
+                        <p>Thanh toán bằng tiền mặt khi đơn hàng được giao tới nơi.</p>
                       </div>
                     </div>
                   </label>
@@ -317,12 +312,13 @@ export const CheckoutPageView = () => {
                     <div className="payment-card-body">
                       <span className="payment-card-icon">💳</span>
                       <div>
-                        <strong>Credit / Debit Card</strong>
-                        <p>Instant approval (Storefront sandbox simulation mode).</p>
+                        <strong>Thẻ tín dụng / Thẻ ghi nợ</strong>
+                        <p>Thanh toán trực tuyến an toàn qua cổng Stripe.</p>
                       </div>
                     </div>
                   </label>
 
+                  {/* Tạm thời ẩn chức năng thanh toán qua MoMo theo yêu cầu
                   {cart.currency === "VND" && (
                     <label className={`payment-card ${paymentMethod === "momo" ? "selected" : ""}`}>
                       <input
@@ -341,6 +337,7 @@ export const CheckoutPageView = () => {
                       </div>
                     </label>
                   )}
+                  */}
                 </div>
               </div>
 
@@ -360,7 +357,7 @@ export const CheckoutPageView = () => {
                   {checkout.isPending || checkoutSession.isPending ? (
                     <>
                       <span className="btn-spinner" />
-                      {checkout.isPending ? "Processing Order..." : "Connecting to Payment..."}
+                      {checkout.isPending ? "Đang xử lý đơn hàng..." : "Đang kết nối thanh toán..."}
                     </>
                   ) : (
                     <>
@@ -368,7 +365,7 @@ export const CheckoutPageView = () => {
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                       </svg>
-                      Place Order • {formatPrice(cart.subtotalMinor, cart.currency)}
+                      Đặt hàng • {formatPrice(cart.subtotalMinor, cart.currency)}
                     </>
                   )}
                 </button>
@@ -379,8 +376,8 @@ export const CheckoutPageView = () => {
           <aside className="checkout-sidebar">
             <div className="checkout-summary-card">
               <div className="summary-card-header">
-                <h3>Order Summary</h3>
-                <span className="summary-item-badge">{cart.items.length} {cart.items.length === 1 ? "item" : "items"}</span>
+                <h3>Tóm tắt đơn hàng</h3>
+                <span className="summary-item-badge">{cart.items.length} sản phẩm</span>
               </div>
 
               <div className="checkout-summary-items">
@@ -404,7 +401,7 @@ export const CheckoutPageView = () => {
                     <div className="checkout-item-details">
                       <h4 className="checkout-item-title">{item.name}</h4>
                       <p className="checkout-item-meta">
-                        {formatPrice(item.unitPriceMinor, item.currency)} each
+                        {formatPrice(item.unitPriceMinor, item.currency)} / sản phẩm
                       </p>
                     </div>
 
@@ -417,20 +414,20 @@ export const CheckoutPageView = () => {
 
               <div className="summary-card-breakdown">
                 <div className="summary-line-row">
-                  <span>Subtotal</span>
+                  <span>Tạm tính</span>
                   <strong>{formatPrice(cart.subtotalMinor, cart.currency)}</strong>
                 </div>
                 <div className="summary-line-row">
-                  <span>Estimated Shipping</span>
-                  <strong className="shipping-free-badge">FREE</strong>
+                  <span>Phí vận chuyển</span>
+                  <strong className="shipping-free-badge">MIỄN PHÍ</strong>
                 </div>
                 <div className="summary-line-row">
-                  <span>Estimated Tax</span>
-                  <span className="summary-muted-text">Included</span>
+                  <span>Thuế</span>
+                  <span className="summary-muted-text">Đã bao gồm</span>
                 </div>
                 <div className="summary-line-divider" />
                 <div className="summary-line-row total-row">
-                  <span>Total Due</span>
+                  <span>Tổng thanh toán</span>
                   <strong className="summary-grand-total">{formatPrice(cart.subtotalMinor, cart.currency)}</strong>
                 </div>
               </div>

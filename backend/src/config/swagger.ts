@@ -688,8 +688,8 @@ export const swaggerSpec = (config: AppConfig) => ({
           slug: { type: "string", example: "mechanical-gaming-keyboard" },
           description: { type: "string" },
           categoryId: { type: "string", example: "66a8f0d24b23d5f35a6a1111" },
-          priceMinor: { type: "integer", example: 8999 },
-          currency: { type: "string", example: "USD" },
+          priceMinor: { type: "integer", example: 3290000 },
+          currency: { type: "string", example: "VND" },
           stockQuantity: { type: "integer", example: 12 },
           images: { type: "array", maxItems: 8, items: { $ref: "#/components/schemas/ProductImage" } },
           status: { type: "string", enum: ["ACTIVE", "INACTIVE"], example: "ACTIVE" },
@@ -705,7 +705,7 @@ export const swaggerSpec = (config: AppConfig) => ({
           description: { type: "string", minLength: 10, maxLength: 3000 },
           categoryId: { type: "string" },
           priceMinor: { type: "integer", minimum: 0 },
-          currency: { type: "string", default: "USD" },
+          currency: { type: "string", default: "VND" },
           stockQuantity: { type: "integer", minimum: 0 },
           images: { type: "array", maxItems: 8, items: { $ref: "#/components/schemas/ProductImage" } },
           status: { type: "string", enum: ["ACTIVE", "INACTIVE"], default: "ACTIVE" }
@@ -733,10 +733,10 @@ export const swaggerSpec = (config: AppConfig) => ({
           slug: { type: "string", nullable: true, example: "mechanical-gaming-keyboard" },
           name: { type: "string", example: "Mechanical Gaming Keyboard" },
           image: { nullable: true, allOf: [{ $ref: "#/components/schemas/ProductImage" }] },
-          unitPriceMinor: { type: "integer", example: 8999 },
-          currency: { type: "string", example: "USD" },
+          unitPriceMinor: { type: "integer", example: 3290000 },
+          currency: { type: "string", example: "VND" },
           quantity: { type: "integer", example: 2 },
-          lineTotalMinor: { type: "integer", example: 17998 },
+          lineTotalMinor: { type: "integer", example: 6580000 },
           stockQuantity: { type: "integer", example: 10 },
           isAvailable: { type: "boolean", example: true }
         }
@@ -747,8 +747,8 @@ export const swaggerSpec = (config: AppConfig) => ({
           id: { type: "string", nullable: true, example: "66a8f0d24b23d5f35a6a3333" },
           items: { type: "array", items: { $ref: "#/components/schemas/CartItem" } },
           itemCount: { type: "integer", example: 2 },
-          subtotalMinor: { type: "integer", example: 17998 },
-          currency: { type: "string", example: "USD" }
+          subtotalMinor: { type: "integer", example: 6580000 },
+          currency: { type: "string", example: "VND" }
         }
       },
       ShippingAddress: {
@@ -786,9 +786,9 @@ export const swaggerSpec = (config: AppConfig) => ({
           productName: { type: "string", example: "Mechanical Gaming Keyboard" },
           productSlug: { type: "string", example: "mechanical-gaming-keyboard" },
           productImage: { nullable: true, allOf: [{ $ref: "#/components/schemas/ProductImage" }] },
-          unitPriceMinor: { type: "integer", example: 8999 },
+          unitPriceMinor: { type: "integer", example: 3290000 },
           quantity: { type: "integer", example: 2 },
-          lineTotalMinor: { type: "integer", example: 17998 }
+          lineTotalMinor: { type: "integer", example: 6580000 }
         }
       },
       Order: {
@@ -798,10 +798,10 @@ export const swaggerSpec = (config: AppConfig) => ({
           orderNumber: { type: "string", example: "ORD-20260731-123456" },
           items: { type: "array", items: { $ref: "#/components/schemas/OrderItem" } },
           shippingAddress: { $ref: "#/components/schemas/ShippingAddress" },
-          subtotalMinor: { type: "integer", example: 17998 },
+          subtotalMinor: { type: "integer", example: 6580000 },
           shippingFeeMinor: { type: "integer", example: 0 },
-          totalMinor: { type: "integer", example: 17998 },
-          currency: { type: "string", example: "USD" },
+          totalMinor: { type: "integer", example: 6580000 },
+          currency: { type: "string", example: "VND" },
           orderStatus: { type: "string", enum: ["PENDING", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED", "RETURNED"] },
           paymentStatus: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"] },
           paymentMethod: { type: "string", enum: ["COD", "CARD", "MOMO"] },
@@ -827,8 +827,8 @@ export const swaggerSpec = (config: AppConfig) => ({
             properties: {
               orderId: { type: "string" },
               status: { type: "string", enum: ["PENDING", "PAID", "FAILED", "REFUNDED"] },
-              amountMinor: { type: "integer", example: 17998 },
-              currency: { type: "string", example: "USD" },
+              amountMinor: { type: "integer", example: 6580000 },
+              currency: { type: "string", example: "VND" },
               provider: { type: "string", enum: ["STRIPE", "COD", "MOMO"] },
               providerCheckoutSessionId: { type: "string", nullable: true, example: "cs_test_123" },
               providerPaymentId: { type: "string", nullable: true, example: "pi_test_123" },

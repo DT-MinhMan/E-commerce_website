@@ -84,7 +84,7 @@ const seedProducts: SeedProduct[] = [
     description: "Sofa module ba chỗ ngồi với bề mặt vải linen, dáng thấp và phần tựa rộng cho phòng khách căn hộ.",
     categorySlug: "sofa-phong-khach",
     roomType: "LIVING_ROOM",
-    priceMinor: 89900,
+    priceMinor: 8990000,
     stockQuantity: 12,
     imageUrl: placeholderImage("Sofa module vai Linen")
   },
@@ -94,7 +94,7 @@ const seedProducts: SeedProduct[] = [
     description: "Ghế thư giãn khung gỗ ash, đệm rời màu trung tính và kích thước phù hợp góc đọc sách.",
     categorySlug: "sofa-phong-khach",
     roomType: "LIVING_ROOM",
-    priceMinor: 32900,
+    priceMinor: 3290000,
     stockQuantity: 3,
     imageUrl: placeholderImage("Ghe thu gian go Ash")
   },
@@ -104,7 +104,7 @@ const seedProducts: SeedProduct[] = [
     description: "Giường ngủ khung oak veneer có hai hộc kéo dưới gầm, tối ưu lưu trữ cho phòng ngủ nhỏ.",
     categorySlug: "giuong-va-tu",
     roomType: "BEDROOM",
-    priceMinor: 74900,
+    priceMinor: 7490000,
     stockQuantity: 0,
     imageUrl: placeholderImage("Giuong hoc keo Oak")
   },
@@ -114,7 +114,7 @@ const seedProducts: SeedProduct[] = [
     description: "Bàn ăn bốn đến sáu chỗ với mặt gỗ sáng, chân bo nhẹ và cơ chế mở rộng cho bữa ăn gia đình.",
     categorySlug: "ban-an-can-ho",
     roomType: "DINING_ROOM",
-    priceMinor: 58900,
+    priceMinor: 5890000,
     stockQuantity: 9,
     imageUrl: placeholderImage("Ban an mo rong Nordic")
   },
@@ -124,7 +124,7 @@ const seedProducts: SeedProduct[] = [
     description: "Đèn bàn thân gốm matte, ánh sáng ấm và chụp vải dệt cho bàn console hoặc kệ đầu giường.",
     categorySlug: "decor-toi-gian",
     roomType: "DECOR",
-    priceMinor: 12900,
+    priceMinor: 1290000,
     stockQuantity: 24,
     imageUrl: placeholderImage("Den ban gom matte")
   },
@@ -134,7 +134,7 @@ const seedProducts: SeedProduct[] = [
     description: "Kệ treo tường thanh mảnh cho sách nhỏ, bình gốm và vật dụng trang trí nhẹ.",
     categorySlug: "decor-toi-gian",
     roomType: "DECOR",
-    priceMinor: 6900,
+    priceMinor: 690000,
     stockQuantity: 18,
     imageUrl: placeholderImage("Ke trang tri treo tuong")
   },
@@ -144,7 +144,7 @@ const seedProducts: SeedProduct[] = [
     description: "Sản phẩm nội thất demo không còn bán, được giữ inactive để kiểm tra quy tắc hiển thị catalog.",
     categorySlug: "giuong-va-tu",
     roomType: "BEDROOM",
-    priceMinor: 9900,
+    priceMinor: 990000,
     stockQuantity: 6,
     status: "INACTIVE",
     imageUrl: placeholderImage("Tu dau giuong Legacy")

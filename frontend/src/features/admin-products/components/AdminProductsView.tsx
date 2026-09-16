@@ -1,13 +1,8 @@
 import { Link, useSearchParams } from "react-router-dom";
+import { formatPrice } from "../../../lib/formatters.js";
 import { useAdminCategoriesQuery, useAdminProductsQuery } from "../../admin/hooks/useAdminQueries.js";
 import type { AdminProductListParams } from "../../admin/types.js";
 import { ROOM_TYPE_LABELS, type RoomType } from "../../catalog/types.js";
-
-const formatPrice = (priceMinor: number, currency: string): string =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: currency || "VND"
-  }).format(priceMinor / (currency === "VND" ? 1 : 100));
 
 const paramsFromSearch = (searchParams: URLSearchParams): AdminProductListParams => ({
   page: Number(searchParams.get("page") ?? 1),
@@ -44,7 +39,6 @@ export const AdminProductsView = () => {
             <Link to="/admin">Admin</Link> / <span>Sản phẩm</span>
           </div>
           <h2>Quản lý Sản phẩm</h2>
-          <p className="admin-header-desc">Quản lý danh sách sản phẩm, tồn kho, giá bán và thông tin chi tiết.</p>
         </div>
         <Link className="admin-btn primary" to="/admin/products/new">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

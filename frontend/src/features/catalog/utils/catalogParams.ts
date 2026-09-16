@@ -52,6 +52,6 @@ export const getCatalogParams = (searchParams: URLSearchParams): ProductListPara
     ...(roomType ? { roomType } : {}),
     ...(q ? { q } : {}),
     ...(minPriceMinor !== undefined ? { minPriceMinor } : {}),
-    ...(maxPriceMinor !== undefined && minPriceMinor !== undefined && maxPriceMinor >= minPriceMinor ? { maxPriceMinor } : {})
+    ...(maxPriceMinor !== undefined && (minPriceMinor === undefined || maxPriceMinor >= minPriceMinor) ? { maxPriceMinor } : {})
   };
 };

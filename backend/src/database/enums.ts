@@ -31,4 +31,4 @@ export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 export const WEBHOOK_PROCESSING_STATUSES = ["RECEIVED", "PROCESSING", "PROCESSED", "FAILED", "IGNORED"] as const;
 export type WebhookProcessingStatus = (typeof WEBHOOK_PROCESSING_STATUSES)[number];
 
-export const DEFAULT_CURRENCY = "USD";
+export const DEFAULT_CURRENCY = "VND";

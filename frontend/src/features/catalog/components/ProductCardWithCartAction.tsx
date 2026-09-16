@@ -1,15 +1,10 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToastStore } from "../../../components/feedback/toastStore.js";
+import { formatPrice } from "../../../lib/formatters.js";
 import { useAuthStore } from "../../auth/store/authStore.js";
 import { useAddCartItem } from "../../cart/hooks/useCartQueries.js";
 import { ProductCard } from "./ProductCard.js";
 import type { Product } from "../types.js";
-
-const formatPrice = (priceMinor: number, currency: string): string =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: currency || "VND"
-  }).format(priceMinor / (currency === "VND" ? 1 : 100));
 
 interface ProductCardWithCartActionProps {
   product: Product;

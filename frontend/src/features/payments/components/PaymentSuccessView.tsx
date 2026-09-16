@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { formatPrice } from "../../../lib/formatters.js";
 import { isPaymentPollingTerminal, usePaymentStatusByOrderQuery } from "../hooks/usePaymentQueries.js";
 import { useOrderDetailQuery } from "../../orders/hooks/useOrderQueries.js";
 import { translatePaymentMethod } from "../../orders/orderUtils.js";
 
 const pollingTimeoutMs = 60_000;
-
-const formatPrice = (priceMinor?: number, currency?: string): string => {
-  if (priceMinor === undefined) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency || "USD"
-  }).format(priceMinor / 100);
-};
 
 const successStatuses = new Set(["SUCCEEDED", "PAID", "COMPLETED", "PROCESSING"]);
 

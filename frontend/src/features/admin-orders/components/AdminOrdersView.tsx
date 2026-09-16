@@ -132,7 +132,6 @@ export const AdminOrdersView = () => {
             <Link to="/admin">Admin</Link> / <span>Đơn hàng</span>
           </div>
           <h2>Quản lý Đơn hàng</h2>
-          <p className="admin-header-desc">Theo dõi tiến độ xử lý đơn hàng, trạng thái thanh toán và thông tin giao hàng.</p>
         </div>
       </div>
 

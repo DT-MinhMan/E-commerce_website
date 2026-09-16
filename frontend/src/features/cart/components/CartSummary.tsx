@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { formatCartPrice } from "./cartFormat.js";
+import { formatPrice } from "../../../lib/formatters.js";
 import type { Cart } from "../types.js";
 
 interface CartSummaryProps {
@@ -16,7 +16,7 @@ export const CartSummary = ({ cart, hasUnavailableItems }: CartSummaryProps) => 
       </div>
       <div className="summary-row">
         <span className="summary-row-label">Tạm tính</span>
-        <span className="summary-row-value">{formatCartPrice(cart.subtotalMinor, cart.currency)}</span>
+        <span className="summary-row-value">{formatPrice(cart.subtotalMinor, cart.currency)}</span>
       </div>
     </div>
 
@@ -24,7 +24,7 @@ export const CartSummary = ({ cart, hasUnavailableItems }: CartSummaryProps) => 
 
     <div className="summary-total-row">
       <span className="total-title">Tổng cộng</span>
-      <span className="total-price">{formatCartPrice(cart.subtotalMinor, cart.currency)}</span>
+      <span className="total-price">{formatPrice(cart.subtotalMinor, cart.currency)}</span>
     </div>
 
     {hasUnavailableItems ? (

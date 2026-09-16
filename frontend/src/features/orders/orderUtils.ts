@@ -87,12 +87,7 @@ export const formatOrderDate = (isoString: string): string => {
   return `${day}/${month}/${year} - ${hours}:${minutes}`;
 };
 
-export const formatPrice = (priceMinor: number, currency: string): string => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency
-  }).format(priceMinor / 100);
-};
+export { formatPrice } from "../../lib/formatters.js";
 
 export const isPayableOrder = (orderStatus: string, paymentStatus: string, paymentMethod?: string): boolean => {
   if (paymentMethod === "COD") {

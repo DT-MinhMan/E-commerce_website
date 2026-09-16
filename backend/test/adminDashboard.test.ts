@@ -63,7 +63,7 @@ describe("adminDashboard API", () => {
     expect(response.body.data.summary).toBeDefined();
     expect(response.body.data.summary.totalOrders).toBe(0);
     expect(response.body.data.summary.paidRevenueMinor).toBe(0);
-    expect(response.body.data.summary.currency).toBe("USD");
+    expect(response.body.data.summary.currency).toBe("VND");
     expect(Array.isArray(response.body.data.summary.ordersByStatus)).toBe(true);
     expect(Array.isArray(response.body.data.summary.lowStockProducts)).toBe(true);
     expect(response.body.data.summary.lowStockProducts.length).toBe(1);

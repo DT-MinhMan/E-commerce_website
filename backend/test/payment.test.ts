@@ -60,7 +60,7 @@ const createProduct = async (
     description: "A compact keyboard with tactile switches.",
     categoryId: category._id,
     priceMinor: overrides.priceMinor ?? 5000,
-    currency: overrides.currency ?? "USD",
+    currency: overrides.currency ?? "VND",
     stockQuantity: overrides.stockQuantity ?? 10,
     status: overrides.status ?? "ACTIVE",
     images: [{ url: "https://example.com/keyboard.png", alt: "Keyboard" }]
@@ -97,7 +97,7 @@ const orderInput = (
   subtotalMinor: overrides.totalMinor ?? 5000,
   shippingFeeMinor: 0,
   totalMinor: overrides.totalMinor ?? 5000,
-  currency: overrides.currency ?? "USD",
+  currency: overrides.currency ?? "VND",
   orderStatus: overrides.orderStatus ?? "PENDING",
   paymentStatus: overrides.paymentStatus ?? "PENDING"
 });
@@ -121,7 +121,7 @@ const seedOrderAndPayment = async (
     userId,
     provider: "STRIPE",
     amountMinor: overrides.paymentAmountMinor ?? overrides.totalMinor ?? 5000,
-    currency: overrides.currency ?? "USD",
+    currency: overrides.currency ?? "VND",
     status: overrides.paymentStatusOnly ?? "PENDING"
   });
 
@@ -138,7 +138,7 @@ const stripeCheckoutSession = (
     id,
     object: "checkout.session",
     amount_total: overrides.amountTotal ?? 5000,
-    currency: overrides.currency ?? "usd",
+    currency: overrides.currency ?? "vnd",
     metadata: { orderId, paymentId, userId: objectId().toString() },
     payment_intent: overrides.paymentIntent ?? "pi_test",
     payment_status: overrides.paymentStatus ?? "paid"
@@ -217,7 +217,7 @@ describe("payments API", () => {
     expect(mockedCreateStripeCheckoutSession.mock.calls[0]?.[0].line_items).toEqual([
       {
         price_data: {
-          currency: "usd",
+          currency: "vnd",
           product_data: {
             name: "Original Keyboard",
             metadata: { productId: order.items[0]?.productId.toString() }
@@ -269,7 +269,7 @@ describe("payments API", () => {
         orderId: order._id.toString(),
         status: "PENDING",
         amountMinor: 5000,
-        currency: "USD",
+        currency: "VND",
         provider: "STRIPE",
         providerCheckoutSessionId: "cs_test_123",
         providerPaymentId: null,
@@ -391,7 +391,7 @@ describe("payments API", () => {
       userId,
       provider: "STRIPE",
       amountMinor: 5000,
-      currency: "USD",
+      currency: "VND",
       status: "PENDING"
     });
     mockedConstructStripeWebhookEvent.mockReturnValue(
