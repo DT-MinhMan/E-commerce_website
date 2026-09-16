@@ -229,10 +229,66 @@ const translateErrorMessage = (message: string, code?: string, status?: number):
     }
   }
 
+  // --- Admin & Catalog Errors ---
+  if (code === "CATEGORY_SLUG_CONFLICT" || message.toLowerCase().includes("category slug is already in use")) {
+    return "Đường dẫn (slug) danh mục đã tồn tại. Vui lòng chọn đường dẫn khác.";
+  }
+  if (code === "CATEGORY_NOT_EMPTY" || message.toLowerCase().includes("cannot deactivate category with active products")) {
+    return "Không thể ẩn hoặc khóa danh mục đang chứa các sản phẩm còn hoạt động.";
+  }
+  if (code === "CATEGORY_NOT_FOUND" || message.toLowerCase().includes("category not found")) {
+    return "Không tìm thấy danh mục yêu cầu.";
+  }
+  if (code === "CATEGORY_INACTIVE" || message.toLowerCase().includes("category is inactive")) {
+    return "Danh mục đã bị tạm ẩn hoặc không hoạt động.";
+  }
+  if (code === "PRODUCT_SLUG_CONFLICT" || message.toLowerCase().includes("product slug is already in use")) {
+    return "Đường dẫn (slug) sản phẩm đã tồn tại. Vui lòng chọn đường dẫn khác.";
+  }
+  if (code === "PRODUCT_NOT_FOUND" || message.toLowerCase().includes("product not found")) {
+    return "Không tìm thấy thông tin sản phẩm.";
+  }
+  if (code === "PRODUCT_INACTIVE" || message.toLowerCase().includes("product is inactive")) {
+    return "Sản phẩm hiện đang ở trạng thái ngừng hoạt động.";
+  }
+  if (code === "PRODUCT_OUT_OF_STOCK" || message.toLowerCase().includes("out of stock")) {
+    return "Sản phẩm hiện đã hết hàng trong kho.";
+  }
+
+  // --- Admin Order Management & Order Status Errors ---
+  if (code === "ORDER_STATUS_CONFLICT" || message.toLowerCase().includes("order status changed before this update")) {
+    return "Trạng thái đơn hàng đã bị thay đổi trước đó. Vui lòng làm mới trang để cập nhật.";
+  }
+  if (code === "ORDER_STATUS_TRANSITION_INVALID" || message.toLowerCase().includes("order status transition is not allowed")) {
+    return "Không thể chuyển sang trạng thái này từ trạng thái hiện tại của đơn hàng.";
+  }
+
+  // --- Upload & Media Errors ---
+  if (code === "CLOUDINARY_CONFIG_MISSING" || message.toLowerCase().includes("cloudinary is not configured")) {
+    return "Hệ thống lưu trữ hình ảnh chưa được cấu hình. Vui lòng liên hệ quản trị hệ thống.";
+  }
+  if (code === "CLOUDINARY_UPLOAD_FAILED" || message.toLowerCase().includes("cloudinary image upload failed")) {
+    return "Tải ảnh lên máy chủ lưu trữ thất bại. Vui lòng kiểm tra lại kích thước hoặc định dạng tệp ảnh.";
+  }
+  if (code === "CLOUDINARY_UPLOAD_INVALID" || message.toLowerCase().includes("cloudinary upload response is invalid")) {
+    return "Dịch vụ tải ảnh phản hồi không hợp lệ. Vui lòng thử lại.";
+  }
+
+  // --- User & Cart Errors ---
+  if (code === "USER_NOT_FOUND" || message.toLowerCase().includes("user not found")) {
+    return "Không tìm thấy thông tin người dùng.";
+  }
+  if (code === "CART_EMPTY" || message.toLowerCase().includes("cart is empty")) {
+    return "Giỏ hàng hiện đang trống.";
+  }
+  if (code === "CART_ITEM_NOT_FOUND" || message.toLowerCase().includes("cart item not found")) {
+    return "Không tìm thấy sản phẩm này trong giỏ hàng.";
+  }
+
   // --- Fallback Status Code & Network Error Translation ---
   if (status) {
-    if (status === 401) return "Phiên làm việc đã hết hạn hoặc không hợp lệ.";
-    if (status === 403) return "Bạn không có quyền thực hiện thao tác này.";
+    if (status === 401) return "Phiên làm việc đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.";
+    if (status === 403) return "Bạn không có quyền thực hiện thao tác quản trị này.";
     if (status === 404) return "Không tìm thấy dữ liệu yêu cầu.";
     if (status >= 500) return "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.";
   }
