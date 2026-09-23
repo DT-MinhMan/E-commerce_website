@@ -37,7 +37,7 @@ let authHandlers: AuthHandlers = {};
 
 export const apiClient = axios.create({
   baseURL: config.apiBaseUrl,
-  timeout: 8000,
+  timeout: 60000,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json"
